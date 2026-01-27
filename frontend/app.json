@@ -45,14 +45,14 @@
     "experiments": {
       "typedRoutes": true
     },
+    "owner": "carrodnun",
     "extra": {
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": "TU_PROJECT_ID_AQUI"
-      },
-      "backendUrl": "https://tu-backend-url.com"
+        "projectId": "auto"
+      }
     }
   }
 }
