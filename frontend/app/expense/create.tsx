@@ -11,13 +11,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
 import api from '../../src/utils/api';
 import { ExpenseCategory } from '../../src/types';
+import { COLORS } from '../../src/constants/colors';
 
 export default function CreateExpenseScreen() {
   const { tripId } = useLocalSearchParams();
@@ -29,7 +30,7 @@ export default function CreateExpenseScreen() {
   const [notes, setNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState('');
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,10 +39,10 @@ export default function CreateExpenseScreen() {
   }, []);
 
   const requestPermissions = async () => {
-    const cameraStatus = await Camera.requestCameraPermissionsAsync();
-    const mediaLibraryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+    const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
-    if (cameraStatus.status !== 'granted' || mediaLibraryStatus.status !== 'granted') {
+    if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
       Alert.alert(
         'Permisos necesarios',
         'Se necesitan permisos de cámara y galería para capturar tickets'
@@ -187,7 +188,7 @@ export default function CreateExpenseScreen() {
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
             />
           </View>
         </View>
@@ -199,7 +200,7 @@ export default function CreateExpenseScreen() {
             placeholder="YYYY-MM-DD"
             value={date}
             onChangeText={setDate}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.textMuted}
           />
         </View>
 
@@ -210,7 +211,7 @@ export default function CreateExpenseScreen() {
             placeholder="Ej: Restaurante Los Pinos"
             value={establishment}
             onChangeText={setEstablishment}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.textMuted}
           />
         </View>
 
@@ -218,35 +219,15 @@ export default function CreateExpenseScreen() {
           <Text style={styles.label}>Categoría *</Text>
           <TouchableOpacity
             style={styles.picker}
-            onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+            onPress={() => setShowCategoryModal(true)}
           >
             <Text
               style={selectedCategory ? styles.pickerText : styles.pickerPlaceholder}
             >
               {selectedCategory ? selectedCategory.name : 'Seleccionar categoría'}
             </Text>
-            <Ionicons
-              name={showCategoryPicker ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color="#6B7280"
-            />
+            <Ionicons name="chevron-down" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
-          {showCategoryPicker && (
-            <View style={styles.pickerOptions}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category.category_id}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    setCategoryId(category.category_id);
-                    setShowCategoryPicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerOptionText}>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
 
         <View style={styles.section}>
@@ -258,7 +239,7 @@ export default function CreateExpenseScreen() {
             onChangeText={setNotes}
             multiline
             numberOfLines={3}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.textMuted}
           />
         </View>
 
@@ -267,18 +248,34 @@ export default function CreateExpenseScreen() {
           {receiptImage ? (
             <View style={styles.imageContainer}>
               <Image source={{ uri: receiptImage }} style={styles.receiptImage} />
-              <TouchableOpacity
-                style={styles.changeImageButton}
-                onPress={showImageOptions}
-              >
-                <Text style={styles.changeImageButtonText}>Cambiar Foto</Text>
-              </TouchableOpacity>
+              <View style={styles.imageActions}>
+                <TouchableOpacity
+                  style={styles.imageActionButton}
+                  onPress={takePhoto}
+                >
+                  <Ionicons name="camera" size={20} color={COLORS.primary} />
+                  <Text style={styles.imageActionText}>Cámara</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.imageActionButton}
+                  onPress={pickImage}
+                >
+                  <Ionicons name="images" size={20} color={COLORS.primary} />
+                  <Text style={styles.imageActionText}>Galería</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
-            <TouchableOpacity style={styles.captureButton} onPress={showImageOptions}>
-              <Ionicons name="camera" size={32} color="#4F46E5" />
-              <Text style={styles.captureButtonText}>Capturar o Seleccionar Ticket</Text>
-            </TouchableOpacity>
+            <View style={styles.captureOptions}>
+              <TouchableOpacity style={styles.captureButton} onPress={takePhoto}>
+                <Ionicons name="camera" size={32} color={COLORS.primary} />
+                <Text style={styles.captureButtonText}>Tomar Foto</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.captureButton} onPress={pickImage}>
+                <Ionicons name="images" size={32} color={COLORS.primary} />
+                <Text style={styles.captureButtonText}>Desde Galería</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -294,6 +291,45 @@ export default function CreateExpenseScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Modal para seleccionar categoría */}
+      <Modal visible={showCategoryModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Categoría</Text>
+              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScroll}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.category_id}
+                  style={[
+                    styles.modalOption,
+                    categoryId === category.category_id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setCategoryId(category.category_id);
+                    setShowCategoryModal(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.modalOptionText,
+                    categoryId === category.category_id && styles.modalOptionTextSelected,
+                  ]}>
+                    {category.name}
+                  </Text>
+                  {categoryId === category.category_id && (
+                    <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -301,10 +337,10 @@ export default function CreateExpenseScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingTop: 48,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -329,25 +365,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: COLORS.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
   },
   amountInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -355,23 +391,23 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#4F46E5',
+    color: COLORS.primary,
     marginRight: 8,
   },
   amountTextInput: {
     flex: 1,
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
   picker: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -381,70 +417,65 @@ const styles = StyleSheet.create({
   },
   pickerText: {
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
   },
   pickerPlaceholder: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
   },
-  pickerOptions: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    marginTop: 8,
-    maxHeight: 200,
-  },
-  pickerOption: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  pickerOptionText: {
-    fontSize: 16,
-    color: '#111827',
+  captureOptions: {
+    flexDirection: 'row',
+    gap: 12,
   },
   captureButton: {
-    backgroundColor: '#FFFFFF',
+    flex: 1,
+    backgroundColor: COLORS.card,
     borderWidth: 2,
-    borderColor: '#4F46E5',
+    borderColor: COLORS.primary,
     borderStyle: 'dashed',
     borderRadius: 12,
-    padding: 32,
+    padding: 24,
     alignItems: 'center',
   },
   captureButtonText: {
-    fontSize: 16,
-    color: '#4F46E5',
+    fontSize: 14,
+    color: COLORS.primary,
     fontWeight: '600',
-    marginTop: 12,
+    marginTop: 8,
   },
   imageContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 8,
-    alignItems: 'center',
   },
   receiptImage: {
     width: '100%',
-    height: 300,
+    height: 250,
     borderRadius: 8,
     resizeMode: 'contain',
   },
-  changeImageButton: {
+  imageActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
     marginTop: 12,
+  },
+  imageActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: COLORS.primaryBackground,
     borderRadius: 8,
   },
-  changeImageButtonText: {
+  imageActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: COLORS.primary,
+    marginLeft: 8,
   },
   submitButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -452,11 +483,60 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   submitButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: COLORS.textMuted,
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  modalScroll: {
+    padding: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: COLORS.background,
+  },
+  modalOptionSelected: {
+    backgroundColor: COLORS.primaryBackground,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  modalOptionTextSelected: {
+    color: COLORS.primary,
     fontWeight: '600',
   },
 });

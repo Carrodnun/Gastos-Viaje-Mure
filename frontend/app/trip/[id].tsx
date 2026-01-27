@@ -11,8 +11,9 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
-import { Trip, Expense, User } from '../../src/types';
+import { Trip, Expense, User, CostCenter } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
+import { COLORS } from '../../src/constants/colors';
 
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -21,7 +22,9 @@ export default function TripDetailScreen() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [users, setUsers] = useState<Record<string, User>>({});
+  const [costCenters, setCostCenters] = useState<Record<string, CostCenter>>({});
   const [loading, setLoading] = useState(true);
+  const [showParticipants, setShowParticipants] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -30,10 +33,11 @@ export default function TripDetailScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [tripRes, expensesRes, usersRes] = await Promise.all([
+      const [tripRes, expensesRes, usersRes, centersRes] = await Promise.all([
         api.get(`/api/trips/${id}`),
         api.get(`/api/expenses/trip/${id}`),
         api.get('/api/admin/users'),
+        api.get('/api/admin/cost-centers'),
       ]);
 
       setTrip(tripRes.data);
@@ -45,6 +49,13 @@ export default function TripDetailScreen() {
         userMap[u.user_id] = u;
       });
       setUsers(userMap);
+
+      // Create cost center lookup
+      const centerMap: Record<string, CostCenter> = {};
+      centersRes.data.cost_centers.forEach((c: CostCenter) => {
+        centerMap[c.center_id] = c;
+      });
+      setCostCenters(centerMap);
     } catch (error: any) {
       console.error('Error loading trip:', error);
       Alert.alert('Error', 'No se pudo cargar el viaje');
@@ -67,13 +78,13 @@ export default function TripDetailScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#F59E0B';
+        return COLORS.pending;
       case 'approved':
-        return '#10B981';
+        return COLORS.approved;
       case 'rejected':
-        return '#EF4444';
+        return COLORS.rejected;
       default:
-        return '#6B7280';
+        return COLORS.textSecondary;
     }
   };
 
@@ -99,6 +110,8 @@ export default function TripDetailScreen() {
       </View>
     );
   }
+
+  const costCenter = costCenters[trip.cost_center_id];
 
   return (
     <View style={styles.container}>
@@ -130,20 +143,68 @@ export default function TripDetailScreen() {
 
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={20} color="#6B7280" />
+            <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
             <Text style={styles.infoText}>
               Creado: {new Date(trip.created_at).toLocaleDateString('es-ES')}
             </Text>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="people-outline" size={20} color="#6B7280" />
-            <Text style={styles.infoText}>
-              {trip.participants.length} participante(s)
-            </Text>
-          </View>
+          {costCenter && (
+            <View style={styles.infoRow}>
+              <Ionicons name="business-outline" size={20} color={COLORS.textSecondary} />
+              <Text style={styles.infoText}>
+                Centro de Coste: {costCenter.name} ({costCenter.code})
+              </Text>
+            </View>
+          )}
+          
+          {/* Sección de Participantes */}
+          <TouchableOpacity 
+            style={styles.participantsHeader}
+            onPress={() => setShowParticipants(!showParticipants)}
+          >
+            <View style={styles.infoRow}>
+              <Ionicons name="people-outline" size={20} color={COLORS.textSecondary} />
+              <Text style={styles.infoText}>
+                {trip.participants.length} participante(s)
+              </Text>
+            </View>
+            <Ionicons 
+              name={showParticipants ? 'chevron-up' : 'chevron-down'} 
+              size={20} 
+              color={COLORS.textSecondary} 
+            />
+          </TouchableOpacity>
+
+          {showParticipants && (
+            <View style={styles.participantsList}>
+              {trip.participants.map((participantId) => {
+                const participant = users[participantId];
+                const isCreator = participantId === trip.creator_id;
+                return (
+                  <View key={participantId} style={styles.participantItem}>
+                    <Ionicons 
+                      name="person-circle" 
+                      size={32} 
+                      color={COLORS.primary} 
+                    />
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName}>
+                        {participant?.name || 'Usuario'}
+                        {isCreator && ' (Creador)'}
+                      </Text>
+                      <Text style={styles.participantEmail}>
+                        {participant?.email || ''}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {trip.status === 'approved' && trip.approved_by && (
             <View style={styles.infoRow}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
+              <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
               <Text style={styles.infoText}>
                 Aprobado por {users[trip.approved_by]?.name || 'Usuario'}
               </Text>
@@ -175,7 +236,7 @@ export default function TripDetailScreen() {
             <Text style={styles.sectionTitle}>Gastos</Text>
             {trip.status === 'approved' && (
               <TouchableOpacity onPress={handleAddExpense}>
-                <Ionicons name="add-circle" size={28} color="#4F46E5" />
+                <Ionicons name="add-circle" size={28} color={COLORS.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -204,7 +265,7 @@ export default function TripDetailScreen() {
                   {users[expense.user_id]?.name || 'Usuario'}
                 </Text>
                 {expense.receipt_image && (
-                  <Ionicons name="image" size={16} color="#10B981" />
+                  <Ionicons name="image" size={16} color={COLORS.success} />
                 )}
               </View>
             </TouchableOpacity>
@@ -212,18 +273,25 @@ export default function TripDetailScreen() {
 
           {expenses.length === 0 && (
             <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={64} color="#D1D5DB" />
+              <Ionicons name="receipt-outline" size={64} color={COLORS.border} />
               <Text style={styles.emptyText}>
                 {trip.status === 'approved'
                   ? 'No hay gastos aún. ¡Añade el primero!'
                   : 'Este viaje aún no tiene gastos'}
               </Text>
+              {trip.status === 'approved' && (
+                <TouchableOpacity style={styles.addExpenseButton} onPress={handleAddExpense}>
+                  <Ionicons name="add" size={20} color="#FFFFFF" />
+                  <Text style={styles.addExpenseButtonText}>Añadir Gasto</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {trip.status === 'approved' && (
+      {trip.status === 'approved' && expenses.length > 0 && (
         <TouchableOpacity style={styles.fab} onPress={handleAddExpense}>
           <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
@@ -235,7 +303,7 @@ export default function TripDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
@@ -246,7 +314,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingTop: 48,
     paddingBottom: 24,
     paddingHorizontal: 16,
@@ -276,15 +344,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   infoCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
@@ -293,8 +356,40 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginLeft: 8,
+    flex: 1,
+  },
+  participantsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  participantsList: {
+    marginTop: 8,
+    marginLeft: 28,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  participantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  participantInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  participantName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  participantEmail: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
   },
   rejectionCard: {
     backgroundColor: '#FEE2E2',
@@ -308,16 +403,11 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   statItem: {
     flex: 1,
@@ -325,17 +415,17 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: COLORS.borderLight,
   },
   statLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginBottom: 8,
   },
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
   },
   section: {
     padding: 16,
@@ -349,18 +439,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
   },
   expenseCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -373,15 +458,15 @@ const styles = StyleSheet.create({
   expenseAmount: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
     marginBottom: 4,
   },
   expenseEstablishment: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
   },
   expenseDate: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: COLORS.primaryBackground,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -390,7 +475,7 @@ const styles = StyleSheet.create({
   expenseDateText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: COLORS.primary,
   },
   expenseFooter: {
     flexDirection: 'row',
@@ -399,7 +484,7 @@ const styles = StyleSheet.create({
   },
   expenseUser: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
   },
   emptyState: {
     alignItems: 'center',
@@ -407,9 +492,24 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
     marginTop: 16,
     textAlign: 'center',
+  },
+  addExpenseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  addExpenseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   fab: {
     position: 'absolute',
@@ -418,13 +518,8 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
   },
 });
