@@ -168,38 +168,33 @@ async def get_current_user(
     request: Request,
     authorization: Optional[str] = Header(None)
 ) -> User:
-    # Try to get session_token from cookie first
-    session_token = request.cookies.get("session_token")
+    """Get current user from JWT token"""
+    token = None
     
-    # If not in cookie, try Authorization header
-    if not session_token and authorization:
-        if authorization.startswith("Bearer "):
-            session_token = authorization.replace("Bearer ", "")
+    # Try to get token from Authorization header
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "")
     
-    if not session_token:
+    # Try to get token from cookie
+    if not token:
+        token = request.cookies.get("access_token")
+    
+    if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    # Find session
-    session = await db.user_sessions.find_one(
-        {"session_token": session_token},
-        {"_id": 0}
-    )
+    # Decode JWT token
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    if not session:
-        raise HTTPException(status_code=401, detail="Invalid session")
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
     
-    # Check expiry
-    expires_at = session["expires_at"]
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    
-    if expires_at < datetime.now(timezone.utc):
-        raise HTTPException(status_code=401, detail="Session expired")
-    
-    # Get user
+    # Get user from database
     user_doc = await db.users.find_one(
-        {"user_id": session["user_id"]},
-        {"_id": 0}
+        {"user_id": user_id},
+        {"_id": 0, "password_hash": 0}  # Exclude password hash
     )
     
     if not user_doc:
