@@ -133,7 +133,7 @@ export default function TripDetailScreen() {
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={20} color="#6B7280" />
             <Text style={styles.infoText}>
-              Creado: {format(new Date(trip.created_at), 'dd MMM yyyy', { locale: es })}
+              Creado: {new Date(trip.created_at).toLocaleDateString('es-ES')}
             </Text>
           </View>
           <View style={styles.infoRow}>
