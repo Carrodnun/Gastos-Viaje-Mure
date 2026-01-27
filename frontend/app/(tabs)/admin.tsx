@@ -10,6 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
@@ -24,9 +25,11 @@ export default function AdminScreen() {
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [deleteItem, setDeleteItem] = useState<{id: string; name: string; type: string} | null>(null);
 
   // Form states
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -54,6 +57,14 @@ export default function AdminScreen() {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}: ${message}`);
+    } else {
+      Alert.alert(title, message);
     }
   };
 
@@ -91,9 +102,41 @@ export default function AdminScreen() {
     setShowModal(true);
   };
 
+  const openDeleteModal = (id: string, name: string, type: string) => {
+    setDeleteItem({ id, name, type });
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteItem) return;
+
+    try {
+      setLoading(true);
+      let endpoint = '';
+      if (deleteItem.type === 'user') {
+        endpoint = `/api/admin/users/${deleteItem.id}`;
+      } else if (deleteItem.type === 'center') {
+        endpoint = `/api/admin/cost-centers/${deleteItem.id}`;
+      } else if (deleteItem.type === 'category') {
+        endpoint = `/api/admin/expense-categories/${deleteItem.id}`;
+      }
+
+      await api.delete(endpoint);
+      showAlert('Éxito', 'Elemento eliminado correctamente');
+      setShowDeleteModal(false);
+      setDeleteItem(null);
+      loadData();
+    } catch (error: any) {
+      console.error('Error deleting:', error);
+      showAlert('Error', error.response?.data?.detail || 'Error al eliminar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateUser = async () => {
     if (!newUserEmail || !newUserName) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      showAlert('Error', 'Por favor completa todos los campos');
       return;
     }
 
@@ -105,51 +148,28 @@ export default function AdminScreen() {
           name: newUserName,
           role: newUserRole,
         });
-        Alert.alert('Éxito', 'Usuario actualizado');
+        showAlert('Éxito', 'Usuario actualizado');
       } else {
         const response = await api.post('/api/admin/users', {
           email: newUserEmail,
           name: newUserName,
           role: newUserRole,
         });
-        Alert.alert('Éxito', `Usuario creado. Contraseña temporal: ${response.data.temporary_password}`);
+        showAlert('Éxito', `Usuario creado. Contraseña temporal: ${response.data.temporary_password}`);
       }
       setShowModal(false);
       resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar usuario');
+      showAlert('Error', error.response?.data?.detail || 'Error al guardar usuario');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    Alert.alert(
-      'Eliminar Usuario',
-      `¿Estás seguro que deseas eliminar a ${userName}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/api/admin/users/${userId}`);
-              Alert.alert('Éxito', 'Usuario eliminado');
-              loadData();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.detail || 'Error al eliminar');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleCreateCostCenter = async () => {
     if (!newCenterName || !newCenterCode) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
+      showAlert('Error', 'Por favor completa todos los campos');
       return;
     }
 
@@ -160,50 +180,27 @@ export default function AdminScreen() {
           name: newCenterName,
           code: newCenterCode,
         });
-        Alert.alert('Éxito', 'Centro de coste actualizado');
+        showAlert('Éxito', 'Centro de coste actualizado');
       } else {
         await api.post('/api/admin/cost-centers', {
           name: newCenterName,
           code: newCenterCode,
         });
-        Alert.alert('Éxito', 'Centro de coste creado');
+        showAlert('Éxito', 'Centro de coste creado');
       }
       setShowModal(false);
       resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar centro');
+      showAlert('Error', error.response?.data?.detail || 'Error al guardar centro');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteCostCenter = async (centerId: string, centerName: string) => {
-    Alert.alert(
-      'Eliminar Centro de Coste',
-      `¿Estás seguro que deseas eliminar "${centerName}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/api/admin/cost-centers/${centerId}`);
-              Alert.alert('Éxito', 'Centro de coste eliminado');
-              loadData();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.detail || 'Error al eliminar');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleCreateCategory = async () => {
     if (!newCategoryName) {
-      Alert.alert('Error', 'Por favor ingresa un nombre');
+      showAlert('Error', 'Por favor ingresa un nombre');
       return;
     }
 
@@ -213,65 +210,32 @@ export default function AdminScreen() {
         await api.put(`/api/admin/expense-categories/${editId}`, {
           name: newCategoryName,
         });
-        Alert.alert('Éxito', 'Categoría actualizada');
+        showAlert('Éxito', 'Categoría actualizada');
       } else {
         await api.post('/api/admin/expense-categories', {
           name: newCategoryName,
         });
-        Alert.alert('Éxito', 'Categoría creada');
+        showAlert('Éxito', 'Categoría creada');
       }
       setShowModal(false);
       resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar categoría');
+      showAlert('Error', error.response?.data?.detail || 'Error al guardar categoría');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
-    Alert.alert(
-      'Eliminar Categoría',
-      `¿Estás seguro que deseas eliminar "${categoryName}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/api/admin/expense-categories/${categoryId}`);
-              Alert.alert('Éxito', 'Categoría eliminada');
-              loadData();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.detail || 'Error al eliminar');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const handleExport = async () => {
     try {
-      Alert.alert(
-        'Exportar',
-        'La exportación a Excel se descargará automáticamente',
-        [
-          {
-            text: 'OK',
-            onPress: async () => {
-              const response = await api.get('/api/admin/export/excel', {
-                responseType: 'blob',
-              });
-              Alert.alert('Éxito', 'Archivo descargado');
-            },
-          },
-        ]
-      );
+      showAlert('Exportar', 'La exportación a Excel se descargará automáticamente');
+      const response = await api.get('/api/admin/export/excel', {
+        responseType: 'blob',
+      });
+      showAlert('Éxito', 'Archivo descargado');
     } catch (error: any) {
-      Alert.alert('Error', 'Error al exportar');
+      showAlert('Error', 'Error al exportar');
     }
   };
 
@@ -335,7 +299,7 @@ export default function AdminScreen() {
                   </View>
                   <TouchableOpacity 
                     style={styles.deleteButton}
-                    onPress={() => handleDeleteUser(user.user_id, user.name)}
+                    onPress={() => openDeleteModal(user.user_id, user.name, 'user')}
                   >
                     <Ionicons name="trash-outline" size={20} color={COLORS.error} />
                   </TouchableOpacity>
@@ -365,7 +329,7 @@ export default function AdminScreen() {
                   />
                   <TouchableOpacity 
                     style={styles.deleteButton}
-                    onPress={() => handleDeleteCostCenter(center.center_id, center.name)}
+                    onPress={() => openDeleteModal(center.center_id, center.name, 'center')}
                   >
                     <Ionicons name="trash-outline" size={20} color={COLORS.error} />
                   </TouchableOpacity>
@@ -394,7 +358,7 @@ export default function AdminScreen() {
                   />
                   <TouchableOpacity 
                     style={styles.deleteButton}
-                    onPress={() => handleDeleteCategory(category.category_id, category.name)}
+                    onPress={() => openDeleteModal(category.category_id, category.name, 'category')}
                   >
                     <Ionicons name="trash-outline" size={20} color={COLORS.error} />
                   </TouchableOpacity>
@@ -416,6 +380,7 @@ export default function AdminScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Modal para Crear/Editar */}
       <Modal visible={showModal} transparent animationType="slide">
         <KeyboardAvoidingView
           style={styles.modalOverlay}
@@ -507,9 +472,13 @@ export default function AdminScreen() {
                   onPress={handleCreateUser}
                   disabled={loading}
                 >
-                  <Text style={styles.submitButtonText}>
-                    {loading ? 'Guardando...' : (editMode ? 'Actualizar' : 'Crear Usuario')}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>
+                      {editMode ? 'Actualizar' : 'Crear Usuario'}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -535,9 +504,13 @@ export default function AdminScreen() {
                   onPress={handleCreateCostCenter}
                   disabled={loading}
                 >
-                  <Text style={styles.submitButtonText}>
-                    {loading ? 'Guardando...' : (editMode ? 'Actualizar' : 'Crear Centro')}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>
+                      {editMode ? 'Actualizar' : 'Crear Centro'}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -556,14 +529,56 @@ export default function AdminScreen() {
                   onPress={handleCreateCategory}
                   disabled={loading}
                 >
-                  <Text style={styles.submitButtonText}>
-                    {loading ? 'Guardando...' : (editMode ? 'Actualizar' : 'Crear Categoría')}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>
+                      {editMode ? 'Actualizar' : 'Crear Categoría'}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Modal para Confirmar Eliminación */}
+      <Modal visible={showDeleteModal} transparent animationType="fade">
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContent}>
+            <View style={styles.deleteModalIcon}>
+              <Ionicons name="warning" size={48} color={COLORS.error} />
+            </View>
+            <Text style={styles.deleteModalTitle}>Confirmar Eliminación</Text>
+            <Text style={styles.deleteModalText}>
+              ¿Estás seguro que deseas eliminar "{deleteItem?.name}"?
+            </Text>
+            <Text style={styles.deleteModalWarning}>
+              Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteModalCancelButton]}
+                onPress={() => { setShowDeleteModal(false); setDeleteItem(null); }}
+                disabled={loading}
+              >
+                <Text style={styles.deleteModalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.deleteModalConfirmButton]}
+                onPress={handleDelete}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.deleteModalConfirmText}>Eliminar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -748,5 +763,70 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  deleteModalContent: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  deleteModalIcon: {
+    marginBottom: 16,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  deleteModalText: {
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  deleteModalWarning: {
+    fontSize: 14,
+    color: COLORS.error,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  deleteModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteModalCancelButton: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  deleteModalConfirmButton: {
+    backgroundColor: COLORS.error,
+  },
+  deleteModalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  deleteModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

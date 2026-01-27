@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { Trip, Expense, User, CostCenter } from '../../src/types';
@@ -25,10 +26,6 @@ export default function TripDetailScreen() {
   const [costCenters, setCostCenters] = useState<Record<string, CostCenter>>({});
   const [loading, setLoading] = useState(true);
   const [showParticipants, setShowParticipants] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, [id]);
 
   const loadData = async () => {
     try {
@@ -58,18 +55,36 @@ export default function TripDetailScreen() {
       setCostCenters(centerMap);
     } catch (error: any) {
       console.error('Error loading trip:', error);
-      Alert.alert('Error', 'No se pudo cargar el viaje');
+      const msg = 'No se pudo cargar el viaje';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, [id]);
+
+  // Reload when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [id])
+  );
+
   const handleAddExpense = () => {
     if (trip?.status !== 'approved') {
-      Alert.alert(
-        'Viaje no aprobado',
-        'Solo puedes añadir gastos a viajes aprobados'
-      );
+      const msg = 'Solo puedes añadir gastos a viajes aprobados';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Viaje no aprobado', msg);
+      }
       return;
     }
     router.push(`/expense/create?tripId=${id}`);
@@ -231,14 +246,28 @@ export default function TripDetailScreen() {
           </View>
         </View>
 
+        {/* Botón grande para añadir gasto si está aprobado */}
+        {trip.status === 'approved' && (
+          <TouchableOpacity style={styles.addExpenseBigButton} onPress={handleAddExpense}>
+            <Ionicons name="add-circle" size={24} color="#FFFFFF" />
+            <Text style={styles.addExpenseBigButtonText}>Añadir Nuevo Gasto</Text>
+          </TouchableOpacity>
+        )}
+
+        {trip.status !== 'approved' && (
+          <View style={styles.warningCard}>
+            <Ionicons name="information-circle" size={24} color={COLORS.warning} />
+            <Text style={styles.warningText}>
+              {trip.status === 'pending' 
+                ? 'Este viaje está pendiente de aprobación. No puedes añadir gastos hasta que sea aprobado.'
+                : 'Este viaje fue rechazado. No puedes añadir gastos.'}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Gastos</Text>
-            {trip.status === 'approved' && (
-              <TouchableOpacity onPress={handleAddExpense}>
-                <Ionicons name="add-circle" size={28} color={COLORS.primary} />
-              </TouchableOpacity>
-            )}
+            <Text style={styles.sectionTitle}>Gastos Registrados</Text>
           </View>
 
           {expenses.map((expense) => (
@@ -279,19 +308,13 @@ export default function TripDetailScreen() {
                   ? 'No hay gastos aún. ¡Añade el primero!'
                   : 'Este viaje aún no tiene gastos'}
               </Text>
-              {trip.status === 'approved' && (
-                <TouchableOpacity style={styles.addExpenseButton} onPress={handleAddExpense}>
-                  <Ionicons name="add" size={20} color="#FFFFFF" />
-                  <Text style={styles.addExpenseButtonText}>Añadir Gasto</Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
         </View>
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {trip.status === 'approved' && expenses.length > 0 && (
+      {trip.status === 'approved' && (
         <TouchableOpacity style={styles.fab} onPress={handleAddExpense}>
           <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
@@ -427,6 +450,37 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text,
   },
+  addExpenseBigButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  addExpenseBigButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#92400E',
+    marginLeft: 12,
+  },
   section: {
     padding: 16,
   },
@@ -495,21 +549,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 16,
     textAlign: 'center',
-  },
-  addExpenseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  addExpenseButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   fab: {
     position: 'absolute',

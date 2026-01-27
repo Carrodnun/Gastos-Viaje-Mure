@@ -9,6 +9,8 @@ import {
   Alert,
   Modal,
   TextInput,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
@@ -21,8 +23,11 @@ export default function ApprovalsScreen() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [selectedTripName, setSelectedTripName] = useState<string>('');
   const [rejectReason, setRejectReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadTrips = async () => {
     try {
@@ -40,31 +45,43 @@ export default function ApprovalsScreen() {
     loadTrips();
   }, []);
 
-  const handleApprove = async (tripId: string) => {
-    Alert.alert(
-      'Aprobar Viaje',
-      '¿Estás seguro que deseas aprobar este viaje?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Aprobar',
-          onPress: async () => {
-            try {
-              await api.post(`/api/trips/${tripId}/approve`);
-              Alert.alert('Éxito', 'Viaje aprobado correctamente');
-              loadTrips();
-            } catch (error: any) {
-              console.error('Error approving trip:', error);
-              Alert.alert('Error', error.response?.data?.detail || 'Error al aprobar el viaje');
-            }
-          },
-        },
-      ]
-    );
+  const openApproveModal = (tripId: string, tripName: string) => {
+    setSelectedTripId(tripId);
+    setSelectedTripName(tripName);
+    setShowApproveModal(true);
   };
 
-  const openRejectModal = (tripId: string) => {
+  const handleApprove = async () => {
+    if (!selectedTripId) return;
+
+    try {
+      setActionLoading(true);
+      await api.post(`/api/trips/${selectedTripId}/approve`);
+      setShowApproveModal(false);
+      setSelectedTripId(null);
+      setSelectedTripName('');
+      if (Platform.OS === 'web') {
+        window.alert('Viaje aprobado correctamente');
+      } else {
+        Alert.alert('Éxito', 'Viaje aprobado correctamente');
+      }
+      loadTrips();
+    } catch (error: any) {
+      console.error('Error approving trip:', error);
+      const errorMsg = error.response?.data?.detail || 'Error al aprobar el viaje';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openRejectModal = (tripId: string, tripName: string) => {
     setSelectedTripId(tripId);
+    setSelectedTripName(tripName);
     setRejectReason('');
     setShowRejectModal(true);
   };
@@ -73,15 +90,28 @@ export default function ApprovalsScreen() {
     if (!selectedTripId) return;
 
     try {
+      setActionLoading(true);
       await api.post(`/api/trips/${selectedTripId}/reject`, { reason: rejectReason || null });
-      Alert.alert('Éxito', 'Viaje rechazado');
       setShowRejectModal(false);
       setSelectedTripId(null);
+      setSelectedTripName('');
       setRejectReason('');
+      if (Platform.OS === 'web') {
+        window.alert('Viaje rechazado');
+      } else {
+        Alert.alert('Éxito', 'Viaje rechazado');
+      }
       loadTrips();
     } catch (error: any) {
       console.error('Error rejecting trip:', error);
-      Alert.alert('Error', error.response?.data?.detail || 'Error al rechazar el viaje');
+      const errorMsg = error.response?.data?.detail || 'Error al rechazar el viaje';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -121,14 +151,14 @@ export default function ApprovalsScreen() {
             <View style={styles.actions}>
               <TouchableOpacity
                 style={[styles.button, styles.rejectButton]}
-                onPress={() => openRejectModal(trip.trip_id)}
+                onPress={() => openRejectModal(trip.trip_id, trip.name)}
               >
                 <Ionicons name="close-circle" size={20} color="#FFFFFF" />
                 <Text style={styles.buttonText}>Rechazar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.approveButton]}
-                onPress={() => handleApprove(trip.trip_id)}
+                onPress={() => openApproveModal(trip.trip_id, trip.name)}
               >
                 <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                 <Text style={styles.buttonText}>Aprobar</Text>
@@ -145,6 +175,43 @@ export default function ApprovalsScreen() {
         )}
       </ScrollView>
 
+      {/* Modal para aprobar viaje */}
+      <Modal visible={showApproveModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Aprobar Viaje</Text>
+              <TouchableOpacity onPress={() => setShowApproveModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalLabel}>
+              ¿Estás seguro que deseas aprobar el viaje "{selectedTripName}"?
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowApproveModal(false)}
+                disabled={actionLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalApproveButton]}
+                onPress={handleApprove}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalApproveText}>Aprobar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal para rechazar viaje */}
       <Modal visible={showRejectModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -155,7 +222,10 @@ export default function ApprovalsScreen() {
                 <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalLabel}>Motivo del rechazo (opcional):</Text>
+            <Text style={styles.modalLabel}>
+              Rechazar viaje "{selectedTripName}"
+            </Text>
+            <Text style={styles.modalSubLabel}>Motivo del rechazo (opcional):</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Ingresa el motivo..."
@@ -169,14 +239,20 @@ export default function ApprovalsScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
                 onPress={() => setShowRejectModal(false)}
+                disabled={actionLoading}
               >
                 <Text style={styles.modalCancelText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalRejectButton]}
                 onPress={handleReject}
+                disabled={actionLoading}
               >
-                <Text style={styles.modalRejectText}>Rechazar</Text>
+                {actionLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalRejectText}>Rechazar</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -298,6 +374,11 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   modalLabel: {
+    fontSize: 16,
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  modalSubLabel: {
     fontSize: 14,
     color: COLORS.textSecondary,
     marginBottom: 8,
@@ -332,12 +413,20 @@ const styles = StyleSheet.create({
   modalRejectButton: {
     backgroundColor: COLORS.error,
   },
+  modalApproveButton: {
+    backgroundColor: COLORS.success,
+  },
   modalCancelText: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
   modalRejectText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  modalApproveText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
