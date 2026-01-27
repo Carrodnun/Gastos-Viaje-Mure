@@ -14,7 +14,6 @@ import api from '../../src/utils/api';
 import { Expense, User, ExpenseCategory } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 export default function ExpenseDetailScreen() {
   const { id } = useLocalSearchParams();
