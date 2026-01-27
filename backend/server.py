@@ -333,17 +333,26 @@ async def create_user(
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
     
+    # Create temporary password (user should change it on first login)
+    temp_password = "Password123!"  # En producción, generar contraseña aleatoria y enviar por email
+    password_hash = get_password_hash(temp_password)
+    
     user = {
         "user_id": f"user_{uuid.uuid4().hex[:12]}",
         "email": data.email,
         "name": data.name,
+        "password_hash": password_hash,
         "picture": None,
         "role": data.role,
         "created_at": datetime.now(timezone.utc)
     }
     
     await db.users.insert_one(user)
-    return {"message": "User created", "user_id": user["user_id"]}
+    return {
+        "message": "User created",
+        "user_id": user["user_id"],
+        "temporary_password": temp_password
+    }
 
 @app.get("/api/admin/users")
 async def list_users(current_user: User = Depends(get_current_user)):
