@@ -3,7 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '@react-navigation/native';
 import React from 'react';
 
-// Define a simple theme to avoid navigation errors
+// Define a complete theme with fonts to avoid navigation errors
 const lightTheme = {
   dark: false,
   colors: {
@@ -13,6 +13,24 @@ const lightTheme = {
     text: '#111827',
     border: '#E5E7EB',
     notification: '#EF4444',
+  },
+  fonts: {
+    regular: {
+      fontFamily: 'System',
+      fontWeight: '400' as '400',
+    },
+    medium: {
+      fontFamily: 'System',
+      fontWeight: '500' as '500',
+    },
+    bold: {
+      fontFamily: 'System',
+      fontWeight: '700' as '700',
+    },
+    heavy: {
+      fontFamily: 'System',
+      fontWeight: '900' as '900',
+    },
   },
 };
 
