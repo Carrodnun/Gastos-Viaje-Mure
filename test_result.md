@@ -101,3 +101,308 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Diseñar y crear una app móvil para controlar gastos de viaje de trabajadores. Los usuarios pueden crear viajes asignados a centros de coste, agregar gastos con captura de fotos de tickets, y administradores pueden gestionar usuarios y exportar datos a Excel. Sistema de aprobación de viajes incluido."
+
+backend:
+  - task: "Authentication with Microsoft OAuth"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented Emergent Auth integration for Microsoft OAuth. Users must be pre-created by admin. Session management with cookies and Bearer tokens."
+
+  - task: "User Management (Admin)"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoints: POST /api/admin/users (create), GET /api/admin/users (list), PUT /api/admin/users/{id} (update role). Test users created: admin@empresa.com, autorizador@empresa.com, trabajador@empresa.com"
+
+  - task: "Cost Centers Management"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoints: POST /api/admin/cost-centers (create), GET /api/admin/cost-centers (list), PUT /api/admin/cost-centers/{id} (update). 5 test cost centers created."
+
+  - task: "Expense Categories Management"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoints for managing expense categories. 10 default categories created on startup: Transporte, Alojamiento, Comidas, Combustible, Parking, Peajes, Taxi/Uber, Material de oficina, Teléfono/Comunicaciones, Otros gastos."
+
+  - task: "Trip CRUD Operations"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoints: POST /api/trips (create with participants), GET /api/trips (list user trips), GET /api/trips/{id} (details), PUT /api/trips/{id} (update if pending), GET /api/trips/pending (for approvers)"
+
+  - task: "Trip Approval System"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoints: POST /api/trips/{id}/approve, POST /api/trips/{id}/reject (with optional reason). Only approvers and admins can approve/reject. Trips must be in pending status."
+
+  - task: "Expense CRUD Operations"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoints: POST /api/expenses (create with base64 image), GET /api/expenses/trip/{id} (list), GET /api/expenses/{id} (details), PUT /api/expenses/{id} (update), DELETE /api/expenses/{id}. Users can only edit their own expenses, admins can edit all. Expenses only allowed on approved trips."
+
+  - task: "Excel Export"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoint: GET /api/admin/export/excel. Exports all expenses with columns: Usuario, Centro de Coste, Fecha, Gasto, Motivo, Establecimiento, Viaje. Styled Excel with headers."
+
+  - task: "Audit Logging"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created endpoint: GET /api/audit/{entity_type}/{entity_id}. Logs created for all trip and expense CRUD operations with user tracking and change details."
+
+frontend:
+  - task: "Authentication Flow"
+    implemented: true
+    working: "NA"
+    file: "app/index.tsx, src/store/authStore.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented Microsoft OAuth login with Emergent Auth. Session management with zustand store. Supports both web and mobile platforms. Auto-checks auth on app load and processes session_id from redirect."
+
+  - task: "Tab Navigation"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/_layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created bottom tab navigation with 5 tabs: Inicio (Home), Viajes (Trips), Nuevo (Create Trip), Aprobar (Approvals - only for approvers/admin), Admin (only for admin), Perfil (Profile). Dynamic tab visibility based on user role."
+
+  - task: "Home/Dashboard Screen"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/home.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Dashboard showing user greeting, trip statistics (pending/approved/rejected), and recent trips list. Pull-to-refresh support."
+
+  - task: "Trips List Screen"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/trips.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Trip list with search functionality and status filters (Todos, Pendientes, Aprobados, Rechazados). Click to view trip details."
+
+  - task: "Create Trip Screen"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/create-trip.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Form to create new trip with: name, cost center selector, participants multi-select. Creator automatically added as participant. Keyboard handling implemented."
+
+  - task: "Trip Detail Screen"
+    implemented: true
+    working: "NA"
+    file: "app/trip/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Shows trip details, status, participants, approval info. Lists all expenses for the trip with totals. FAB button to add expense (only for approved trips). Click expense to view details."
+
+  - task: "Create Expense Screen with Camera"
+    implemented: true
+    working: "NA"
+    file: "app/expense/create.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Form to create expense with: amount, date, establishment, category selector, notes, and receipt photo. Camera permissions requested. Options to take photo or select from gallery. Base64 encoding for image storage. Validates trip is approved before allowing expense creation."
+
+  - task: "Expense Detail Screen"
+    implemented: true
+    working: "NA"
+    file: "app/expense/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Shows expense details with large amount display, all info fields, and receipt image preview. Delete button for expense owner and admin. Formatted dates using date-fns."
+
+  - task: "Approvals Screen"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/approvals.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Lists pending trips for approvers/admins. Approve/Reject buttons with confirmation dialogs. Reject allows optional reason input. Refreshes list after action."
+
+  - task: "Admin Panel"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/admin.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Three tabs: Users, Centros, Categorías. FAB to create new items. Lists all users/cost centers/categories with status indicators. Export to Excel button. Modal forms for creating new items with role selectors for users."
+
+  - task: "Profile Screen"
+    implemented: true
+    working: "NA"
+    file: "app/(tabs)/profile.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Shows user info (avatar placeholder, name, email, role badge). Logout button with confirmation. App version display."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Authentication with Microsoft OAuth"
+    - "User Management (Admin)"
+    - "Cost Centers Management"
+    - "Trip CRUD Operations"
+    - "Trip Approval System"
+    - "Expense CRUD Operations"
+    - "Create Expense Screen with Camera"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Initial implementation complete. Full-stack expense tracking app created with:
+    
+    BACKEND (FastAPI):
+    - Authentication via Emergent Auth (Microsoft OAuth)
+    - Role-based access control (user/approver/admin)
+    - Complete API for trips, expenses, cost centers, categories
+    - Approval workflow for trips
+    - Excel export functionality
+    - Audit logging
+    - Base64 image storage for receipts
+    
+    FRONTEND (Expo React Native):
+    - Bottom tab navigation with role-based visibility
+    - Dashboard with statistics
+    - Trip management with search and filters
+    - Expense tracking with camera integration
+    - Admin panel for user/cost center/category management
+    - Approval workflow UI
+    - Profile and logout
+    
+    TEST DATA:
+    - 3 test users created (admin, approver, user)
+    - 5 cost centers
+    - 10 expense categories
+    
+    READY FOR TESTING:
+    Please test all functionality starting with authentication. Test users:
+    - admin@empresa.com (role: admin)
+    - autorizador@empresa.com (role: approver)
+    - trabajador@empresa.com (role: user)
+    
+    Key flows to test:
+    1. Admin creates users and cost centers
+    2. User creates trip with participants
+    3. Approver approves trip
+    4. User adds expenses with camera/gallery
+    5. Admin exports to Excel
+    
+    Note: Camera permissions need to be granted on first use."
