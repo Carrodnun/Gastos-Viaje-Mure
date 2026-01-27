@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 
 export default function TabsLayout() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
 
   return (
     <Tabs
@@ -27,7 +27,7 @@ export default function TabsLayout() {
         },
         headerTintColor: '#FFFFFF',
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: '700',
         },
       }}
     >
