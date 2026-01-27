@@ -1,133 +1,359 @@
-diff --git a/README_EXPENSE_APP.md b/README_EXPENSE_APP.md
-index 3f4f0da..86bf2a0 100644
---- a/README_EXPENSE_APP.md
-+++ b/README_EXPENSE_APP.md
-@@ -201,7 +201,7 @@ Todas las acciones importantes quedan registradas:
- 6. **OCR** para extraer datos automáticamente de tickets
+diff --git a/frontend/src/store/authStore.ts b/frontend/src/store/authStore.ts
+index 88ccd9e..380231b 100644
+--- a/frontend/src/store/authStore.ts
++++ b/frontend/src/store/authStore.ts
+@@ -1,19 +1,18 @@
+ import { create } from 'zustand';
+ import { User } from '../types';
+-import * as WebBrowser from 'expo-web-browser';
+-import * as Linking from 'expo-linking';
+-import { Platform } from 'react-native';
+ import axios from 'axios';
+ import Constants from 'expo-constants';
++import AsyncStorage from '@react-native-async-storage/async-storage';
  
- ### Testing
--- Probar autenticación con cuentas Microsoft reales
-+- Probar autenticación con cuentas Google reales
- - Verificar flujo completo usuario → autorizador → admin
- - Testear captura de cámara en dispositivos físicos
- - Validar exportación Excel con datos reales
+ const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL;
+ 
+ interface AuthState {
+   user: User | null;
+-  sessionToken: string | null;
++  accessToken: string | null;
+   isLoading: boolean;
+   isAuthenticated: boolean;
+-  login: () => Promise<void>;
++  login: (email: string, password: string) => Promise<void>;
++  register: (email: string, password: string, name: string) => Promise<void>;
+   logout: () => Promise<void>;
+   checkAuth: () => Promise<void>;
+   setUser: (user: User | null) => void;
+@@ -21,51 +20,58 @@ interface AuthState {
+ 
+ export const useAuthStore = create<AuthState>((set, get) => ({
+   user: null,
+-  sessionToken: null,
++  accessToken: null,
+   isLoading: true,
+   isAuthenticated: false,
+ 
+   setUser: (user) => set({ user, isAuthenticated: !!user }),
+ 
+-  login: async () => {
++  login: async (email: string, password: string) => {
+     try {
+-      const redirectUrl = Platform.OS === 'web'
+-        ? `${BACKEND_URL}/`
+-        : Linking.createURL('/');
++      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
++        email,
++        password
++      });
+ 
+-      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+-
+-      if (Platform.OS === 'web') {
+-        window.location.href = authUrl;
+-        return;
+-      }
+-
+-      // Mobile flow
+-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
++      const { user, access_token } = response.data;
++      
++      // Save token to AsyncStorage
++      await AsyncStorage.setItem('access_token', access_token);
+       
+-      if (result.type === 'success' && result.url) {
+-        const url = result.url;
+-        const sessionId = url.includes('#session_id=')
+-          ? url.split('#session_id=')[1]?.split('&')[0]
+-          : url.split('?session_id=')[1]?.split('&')[0];
++      set({
++        user,
++        accessToken: access_token,
++        isAuthenticated: true,
++        isLoading: false
++      });
++    } catch (error: any) {
++      console.error('Login error:', error.response?.data || error);
++      throw new Error(error.response?.data?.detail || 'Login failed');
++    }
++  },
+ 
+-        if (sessionId) {
+-          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
+-            session_id: sessionId
+-          });
++  register: async (email: string, password: string, name: string) => {
++    try {
++      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
++        email,
++        password,
++        name
++      });
+ 
+-          const { user, session_token } = response.data;
+-          set({
+-            user,
+-            sessionToken: session_token,
+-            isAuthenticated: true,
+-            isLoading: false
+-          });
+-        }
+-      }
+-    } catch (error) {
+-      console.error('Login error:', error);
+-      set({ isLoading: false });
++      const { user, access_token } = response.data;
++      
++      // Save token to AsyncStorage
++      await AsyncStorage.setItem('access_token', access_token);
++      
++      set({
++        user,
++        accessToken: access_token,
++        isAuthenticated: true,
++        isLoading: false
++      });
++    } catch (error: any) {
++      console.error('Register error:', error.response?.data || error);
++      throw new Error(error.response?.data?.detail || 'Registration failed');
+     }
+   },
+ 
+@@ -73,70 +79,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
+     try {
+       set({ isLoading: true });
+       
+-      // Check for session_id in URL (web)
+-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+-        const hash = window.location.hash;
+-        const query = window.location.search;
+-        
+-        const sessionId = hash.includes('session_id=')
+-          ? hash.split('session_id=')[1]?.split('&')[0]
+-          : query.includes('session_id=')
+-          ? query.split('session_id=')[1]?.split('&')[0]
+-          : null;
+-
+-        if (sessionId) {
+-          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
+-            session_id: sessionId
+-          }, { withCredentials: true });
+-
+-          const { user, session_token } = response.data;
+-          set({
+-            user,
+-            sessionToken: session_token,
+-            isAuthenticated: true,
+-            isLoading: false
+-          });
+-          
+-          // Clean URL
+-          window.history.replaceState({}, document.title, window.location.pathname);
+-          return;
+-        }
++      // Get token from AsyncStorage
++      const token = await AsyncStorage.getItem('access_token');
++      
++      if (!token) {
++        set({ isLoading: false, isAuthenticated: false });
++        return;
+       }
+ 
+-      // Try to get current user with existing session
+-      const state = get();
+-      if (state.sessionToken || Platform.OS === 'web') {
+-        const config = state.sessionToken
+-          ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
+-          : { withCredentials: true };
+-        
+-        const response = await axios.get(`${BACKEND_URL}/api/auth/me`, config);
+-        set({
+-          user: response.data,
+-          isAuthenticated: true,
+-          isLoading: false
+-        });
+-      } else {
+-        set({ isLoading: false });
+-      }
++      // Try to get current user with token
++      const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
++        headers: { Authorization: `Bearer ${token}` }
++      });
++      
++      set({
++        user: response.data,
++        accessToken: token,
++        isAuthenticated: true,
++        isLoading: false
++      });
+     } catch (error) {
+       console.log('Not authenticated');
+-      set({ user: null, isAuthenticated: false, isLoading: false });
++      await AsyncStorage.removeItem('access_token');
++      set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+     }
+   },
+ 
+   logout: async () => {
+     try {
+       const state = get();
+-      const config = state.sessionToken
+-        ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
+-        : { withCredentials: true };
+-      
+-      await axios.post(`${BACKEND_URL}/api/auth/logout`, {}, config);
++      if (state.accessToken) {
++        await axios.post(
++          `${BACKEND_URL}/api/auth/logout`,
++          {},
++          { headers: { Authorization: `Bearer ${state.accessToken}` } }
++        );
++      }
+     } catch (error) {
+       console.error('Logout error:', error);
+     } finally {
+-      set({ user: null, sessionToken: null, isAuthenticated: false });
++      await AsyncStorage.removeItem('access_token');
++      set({ user: null, accessToken: null, isAuthenticated: false });
+     }
+   }
+ }));
 diff --git a/model.patch b/model.patch
-index ef3146d..e69de29 100644
+index 1a0abd8..15e62a0 100644
 --- a/model.patch
 +++ b/model.patch
-@@ -1,115 +0,0 @@
--diff --git a/frontend/app/_layout.tsx b/frontend/app/_layout.tsx
--index f7d8fac..ac34b51 100644
----- a/frontend/app/_layout.tsx
--+++ b/frontend/app/_layout.tsx
--@@ -1,37 +1,43 @@
-- import { Stack } from 'expo-router';
-- import { GestureHandlerRootView } from 'react-native-gesture-handler';
-- import React from 'react';
--+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
--+import { useColorScheme } from 'react-native';
+@@ -1,133 +0,0 @@
+-diff --git a/README_EXPENSE_APP.md b/README_EXPENSE_APP.md
+-index 3f4f0da..86bf2a0 100644
+---- a/README_EXPENSE_APP.md
+-+++ b/README_EXPENSE_APP.md
+-@@ -201,7 +201,7 @@ Todas las acciones importantes quedan registradas:
+- 6. **OCR** para extraer datos automáticamente de tickets
 - 
-- export default function RootLayout() {
--+  const colorScheme = useColorScheme();
--+
--   return (
--     <GestureHandlerRootView style={{ flex: 1 }}>
---      <Stack 
---        screenOptions={{ 
---          headerShown: false,
---          contentStyle: { backgroundColor: '#F9FAFB' }
---        }}
---      >
---        <Stack.Screen 
---          name="index" 
---          options={{ headerShown: false }}
---        />
---        <Stack.Screen 
---          name="(tabs)" 
---          options={{ headerShown: false }}
---        />
---        <Stack.Screen 
---          name="trip/[id]" 
---          options={{ headerShown: false }}
---        />
---        <Stack.Screen 
---          name="expense/create" 
---          options={{ headerShown: false, presentation: 'modal' }}
---        />
---        <Stack.Screen 
---          name="expense/[id]" 
---          options={{ headerShown: false }}
---        />
---      </Stack>
--+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
--+        <Stack 
--+          screenOptions={{ 
--+            headerShown: false,
--+            contentStyle: { backgroundColor: '#F9FAFB' }
--+          }}
--+        >
--+          <Stack.Screen 
--+            name="index" 
--+            options={{ headerShown: false }}
--+          />
--+          <Stack.Screen 
--+            name="(tabs)" 
--+            options={{ headerShown: false }}
--+          />
--+          <Stack.Screen 
--+            name="trip/[id]" 
--+            options={{ headerShown: false }}
--+          />
--+          <Stack.Screen 
--+            name="expense/create" 
--+            options={{ headerShown: false, presentation: 'modal' }}
--+          />
--+          <Stack.Screen 
--+            name="expense/[id]" 
--+            options={{ headerShown: false }}
--+          />
--+        </Stack>
--+      </ThemeProvider>
--     </GestureHandlerRootView>
--   );
-- }
+- ### Testing
+--- Probar autenticación con cuentas Microsoft reales
+-+- Probar autenticación con cuentas Google reales
+- - Verificar flujo completo usuario → autorizador → admin
+- - Testear captura de cámara en dispositivos físicos
+- - Validar exportación Excel con datos reales
 -diff --git a/model.patch b/model.patch
--index ef109f6..e69de29 100644
+-index ef3146d..e69de29 100644
 ---- a/model.patch
 -+++ b/model.patch
--@@ -1,35 +0,0 @@
+-@@ -1,115 +0,0 @@
+--diff --git a/frontend/app/_layout.tsx b/frontend/app/_layout.tsx
+--index f7d8fac..ac34b51 100644
+----- a/frontend/app/_layout.tsx
+--+++ b/frontend/app/_layout.tsx
+--@@ -1,37 +1,43 @@
+-- import { Stack } from 'expo-router';
+-- import { GestureHandlerRootView } from 'react-native-gesture-handler';
+-- import React from 'react';
+--+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
+--+import { useColorScheme } from 'react-native';
+-- 
+-- export default function RootLayout() {
+--+  const colorScheme = useColorScheme();
+--+
+--   return (
+--     <GestureHandlerRootView style={{ flex: 1 }}>
+---      <Stack 
+---        screenOptions={{ 
+---          headerShown: false,
+---          contentStyle: { backgroundColor: '#F9FAFB' }
+---        }}
+---      >
+---        <Stack.Screen 
+---          name="index" 
+---          options={{ headerShown: false }}
+---        />
+---        <Stack.Screen 
+---          name="(tabs)" 
+---          options={{ headerShown: false }}
+---        />
+---        <Stack.Screen 
+---          name="trip/[id]" 
+---          options={{ headerShown: false }}
+---        />
+---        <Stack.Screen 
+---          name="expense/create" 
+---          options={{ headerShown: false, presentation: 'modal' }}
+---        />
+---        <Stack.Screen 
+---          name="expense/[id]" 
+---          options={{ headerShown: false }}
+---        />
+---      </Stack>
+--+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+--+        <Stack 
+--+          screenOptions={{ 
+--+            headerShown: false,
+--+            contentStyle: { backgroundColor: '#F9FAFB' }
+--+          }}
+--+        >
+--+          <Stack.Screen 
+--+            name="index" 
+--+            options={{ headerShown: false }}
+--+          />
+--+          <Stack.Screen 
+--+            name="(tabs)" 
+--+            options={{ headerShown: false }}
+--+          />
+--+          <Stack.Screen 
+--+            name="trip/[id]" 
+--+            options={{ headerShown: false }}
+--+          />
+--+          <Stack.Screen 
+--+            name="expense/create" 
+--+            options={{ headerShown: false, presentation: 'modal' }}
+--+          />
+--+          <Stack.Screen 
+--+            name="expense/[id]" 
+--+            options={{ headerShown: false }}
+--+          />
+--+        </Stack>
+--+      </ThemeProvider>
+--     </GestureHandlerRootView>
+--   );
+-- }
 --diff --git a/model.patch b/model.patch
---index 2f45a58..e69de29 100644
+--index ef109f6..e69de29 100644
 ----- a/model.patch
 --+++ b/model.patch
---@@ -1,30 +0,0 @@
----diff --git a/frontend/app/trip/[id].tsx b/frontend/app/trip/[id].tsx
----index 83c0b19..61238ec 100644
------- a/frontend/app/trip/[id].tsx
----+++ b/frontend/app/trip/[id].tsx
----@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
---- import api from '../../src/utils/api';
---- import { Trip, Expense, User } from '../../src/types';
---- import { useAuthStore } from '../../src/store/authStore';
-----import { format } from 'date-fns';
---- 
---- export default function TripDetailScreen() {
----   const { id } = useLocalSearchParams();
----@@ -133,7 +132,7 @@ export default function TripDetailScreen() {
----           <View style={styles.infoRow}>
----             <Ionicons name="calendar-outline" size={20} color="#6B7280" />
----             <Text style={styles.infoText}>
-----              Creado: {format(new Date(trip.created_at), 'dd MMM yyyy', { locale: es })}
----+              Creado: {new Date(trip.created_at).toLocaleDateString('es-ES')}
----             </Text>
----           </View>
----           <View style={styles.infoRow}>
----@@ -196,7 +195,7 @@ export default function TripDetailScreen() {
----                 </View>
----                 <View style={styles.expenseDate}>
----                   <Text style={styles.expenseDateText}>
-----                    {format(new Date(expense.date), 'dd MMM', { locale: es })}
----+                    {new Date(expense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
----                   </Text>
----                 </View>
----               </View>
+--@@ -1,35 +0,0 @@
+---diff --git a/model.patch b/model.patch
+---index 2f45a58..e69de29 100644
+------ a/model.patch
+---+++ b/model.patch
+---@@ -1,30 +0,0 @@
+----diff --git a/frontend/app/trip/[id].tsx b/frontend/app/trip/[id].tsx
+----index 83c0b19..61238ec 100644
+------- a/frontend/app/trip/[id].tsx
+----+++ b/frontend/app/trip/[id].tsx
+----@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
+---- import api from '../../src/utils/api';
+---- import { Trip, Expense, User } from '../../src/types';
+---- import { useAuthStore } from '../../src/store/authStore';
+-----import { format } from 'date-fns';
+---- 
+---- export default function TripDetailScreen() {
+----   const { id } = useLocalSearchParams();
+----@@ -133,7 +132,7 @@ export default function TripDetailScreen() {
+----           <View style={styles.infoRow}>
+----             <Ionicons name="calendar-outline" size={20} color="#6B7280" />
+----             <Text style={styles.infoText}>
+-----              Creado: {format(new Date(trip.created_at), 'dd MMM yyyy', { locale: es })}
+----+              Creado: {new Date(trip.created_at).toLocaleDateString('es-ES')}
+----             </Text>
+----           </View>
+----           <View style={styles.infoRow}>
+----@@ -196,7 +195,7 @@ export default function TripDetailScreen() {
+----                 </View>
+----                 <View style={styles.expenseDate}>
+----                   <Text style={styles.expenseDateText}>
+-----                    {format(new Date(expense.date), 'dd MMM', { locale: es })}
+----+                    {new Date(expense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+----                   </Text>
+----                 </View>
+----               </View>
