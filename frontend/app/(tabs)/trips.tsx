@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { Trip } from '../../src/types';
+import { COLORS } from '../../src/constants/colors';
 
 export default function TripsScreen() {
   const router = useRouter();
@@ -57,13 +58,13 @@ export default function TripsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#F59E0B';
+        return COLORS.pending;
       case 'approved':
-        return '#10B981';
+        return COLORS.approved;
       case 'rejected':
-        return '#EF4444';
+        return COLORS.rejected;
       default:
-        return '#6B7280';
+        return COLORS.textSecondary;
     }
   };
 
@@ -84,13 +85,13 @@ export default function TripsScreen() {
     <View style={styles.container}>
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#9CA3AF" />
+          <Ionicons name="search" size={20} color={COLORS.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar viajes..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.textMuted}
           />
         </View>
       </View>
@@ -178,7 +179,7 @@ export default function TripsScreen() {
           >
             <View style={styles.tripHeader}>
               <View style={styles.tripTitleContainer}>
-                <Ionicons name="airplane" size={20} color="#4F46E5" />
+                <Ionicons name="airplane" size={20} color={COLORS.primary} />
                 <Text style={styles.tripName}>{trip.name}</Text>
               </View>
               <View
@@ -195,13 +196,13 @@ export default function TripsScreen() {
               </View>
             </View>
             <View style={styles.tripInfo}>
-              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.tripInfoText}>
                 {new Date(trip.created_at).toLocaleDateString('es-ES')}
               </Text>
             </View>
             <View style={styles.tripInfo}>
-              <Ionicons name="people-outline" size={16} color="#6B7280" />
+              <Ionicons name="people-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.tripInfoText}>
                 {trip.participants.length} participante(s)
               </Text>
@@ -211,7 +212,7 @@ export default function TripsScreen() {
 
         {filteredTrips.length === 0 && !loading && (
           <View style={styles.emptyState}>
-            <Ionicons name="airplane-outline" size={64} color="#D1D5DB" />
+            <Ionicons name="airplane-outline" size={64} color={COLORS.border} />
             <Text style={styles.emptyText}>
               {searchQuery || filterStatus
                 ? 'No se encontraron viajes'
@@ -227,18 +228,18 @@ export default function TripsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: COLORS.borderLight,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -247,29 +248,29 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
   },
   filterContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: COLORS.borderLight,
   },
   filterChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.background,
     marginRight: 8,
   },
   filterChipActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
   },
   filterText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: COLORS.textSecondary,
   },
   filterTextActive: {
     color: '#FFFFFF',
@@ -279,15 +280,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   tripCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   tripHeader: {
     flexDirection: 'row',
@@ -303,7 +299,7 @@ const styles = StyleSheet.create({
   tripName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: COLORS.text,
     marginLeft: 8,
     flex: 1,
   },
@@ -323,7 +319,7 @@ const styles = StyleSheet.create({
   },
   tripInfoText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginLeft: 6,
   },
   emptyState: {
@@ -332,7 +328,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
     marginTop: 16,
   },
 });

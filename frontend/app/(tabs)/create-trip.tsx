@@ -9,12 +9,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { CostCenter, User } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
+import { COLORS } from '../../src/constants/colors';
 
 export default function CreateTripScreen() {
   const router = useRouter();
@@ -25,7 +27,7 @@ export default function CreateTripScreen() {
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showCostCenterPicker, setShowCostCenterPicker] = useState(false);
+  const [showCostCenterModal, setShowCostCenterModal] = useState(false);
   const [showUserPicker, setShowUserPicker] = useState(false);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function CreateTripScreen() {
             placeholder="Ej: Viaje a Madrid"
             value={name}
             onChangeText={setName}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.textMuted}
           />
         </View>
 
@@ -116,34 +118,13 @@ export default function CreateTripScreen() {
           <Text style={styles.label}>Centro de Coste *</Text>
           <TouchableOpacity
             style={styles.picker}
-            onPress={() => setShowCostCenterPicker(!showCostCenterPicker)}
+            onPress={() => setShowCostCenterModal(true)}
           >
             <Text style={selectedCostCenter ? styles.pickerText : styles.pickerPlaceholder}>
               {selectedCostCenter ? selectedCostCenter.name : 'Seleccionar centro de coste'}
             </Text>
-            <Ionicons
-              name={showCostCenterPicker ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color="#6B7280"
-            />
+            <Ionicons name="chevron-down" size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
-          {showCostCenterPicker && (
-            <View style={styles.pickerOptions}>
-              {costCenters.map((center) => (
-                <TouchableOpacity
-                  key={center.center_id}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    setCostCenterId(center.center_id);
-                    setShowCostCenterPicker(false);
-                  }}
-                >
-                  <Text style={styles.pickerOptionText}>{center.name}</Text>
-                  <Text style={styles.pickerOptionSubtext}>{center.code}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
 
         <View style={styles.section}>
@@ -153,7 +134,7 @@ export default function CreateTripScreen() {
               <Ionicons
                 name={showUserPicker ? 'chevron-up-circle' : 'add-circle'}
                 size={24}
-                color="#4F46E5"
+                color={COLORS.primary}
               />
             </TouchableOpacity>
           </View>
@@ -161,30 +142,32 @@ export default function CreateTripScreen() {
 
           {showUserPicker && (
             <View style={styles.pickerOptions}>
-              {users.map((user) => (
-                <TouchableOpacity
-                  key={user.user_id}
-                  style={styles.userOption}
-                  onPress={() => toggleParticipant(user.user_id)}
-                >
-                  <View style={styles.userInfo}>
-                    <View
-                      style={[
-                        styles.checkbox,
-                        selectedParticipants.includes(user.user_id) && styles.checkboxChecked,
-                      ]}
-                    >
-                      {selectedParticipants.includes(user.user_id) && (
-                        <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                      )}
+              <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                {users.map((user) => (
+                  <TouchableOpacity
+                    key={user.user_id}
+                    style={styles.userOption}
+                    onPress={() => toggleParticipant(user.user_id)}
+                  >
+                    <View style={styles.userInfo}>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          selectedParticipants.includes(user.user_id) && styles.checkboxChecked,
+                        ]}
+                      >
+                        {selectedParticipants.includes(user.user_id) && (
+                          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                        )}
+                      </View>
+                      <View style={styles.userDetails}>
+                        <Text style={styles.userName}>{user.name}</Text>
+                        <Text style={styles.userEmail}>{user.email}</Text>
+                      </View>
                     </View>
-                    <View style={styles.userDetails}>
-                      <Text style={styles.userName}>{user.name}</Text>
-                      <Text style={styles.userEmail}>{user.email}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -196,7 +179,7 @@ export default function CreateTripScreen() {
                   <View key={user.user_id} style={styles.selectedUserChip}>
                     <Text style={styles.selectedUserText}>{user.name}</Text>
                     <TouchableOpacity onPress={() => toggleParticipant(user.user_id)}>
-                      <Ionicons name="close-circle" size={20} color="#6B7280" />
+                      <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -214,6 +197,48 @@ export default function CreateTripScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Modal para seleccionar centro de coste */}
+      <Modal visible={showCostCenterModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Seleccionar Centro de Coste</Text>
+              <TouchableOpacity onPress={() => setShowCostCenterModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScroll}>
+              {costCenters.map((center) => (
+                <TouchableOpacity
+                  key={center.center_id}
+                  style={[
+                    styles.modalOption,
+                    costCenterId === center.center_id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setCostCenterId(center.center_id);
+                    setShowCostCenterModal(false);
+                  }}
+                >
+                  <View style={styles.modalOptionContent}>
+                    <Text style={[
+                      styles.modalOptionText,
+                      costCenterId === center.center_id && styles.modalOptionTextSelected,
+                    ]}>
+                      {center.name}
+                    </Text>
+                    <Text style={styles.modalOptionSubtext}>{center.code}</Text>
+                  </View>
+                  {costCenterId === center.center_id && (
+                    <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -221,7 +246,7 @@ export default function CreateTripScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -238,28 +263,28 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: COLORS.text,
     marginBottom: 8,
   },
   helperText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginTop: 4,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
   },
   picker: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -269,39 +294,24 @@ const styles = StyleSheet.create({
   },
   pickerText: {
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
   },
   pickerPlaceholder: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
   },
   pickerOptions: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     marginTop: 8,
-    maxHeight: 200,
-  },
-  pickerOption: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  pickerOptionText: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '500',
-  },
-  pickerOptionSubtext: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
+    overflow: 'hidden',
   },
   userOption: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: COLORS.background,
   },
   userInfo: {
     flexDirection: 'row',
@@ -311,14 +321,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   userDetails: {
     marginLeft: 12,
@@ -327,11 +337,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#111827',
+    color: COLORS.text,
   },
   userEmail: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   selectedUsers: {
@@ -342,7 +352,7 @@ const styles = StyleSheet.create({
   selectedUserChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: COLORS.primaryBackground,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -351,12 +361,12 @@ const styles = StyleSheet.create({
   },
   selectedUserText: {
     fontSize: 14,
-    color: '#4F46E5',
+    color: COLORS.primary,
     fontWeight: '500',
     marginRight: 8,
   },
   submitButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -364,11 +374,68 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   submitButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: COLORS.textMuted,
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  modalScroll: {
+    padding: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: COLORS.background,
+  },
+  modalOptionSelected: {
+    backgroundColor: COLORS.primaryBackground,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  modalOptionContent: {
+    flex: 1,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  modalOptionTextSelected: {
+    color: COLORS.primary,
+  },
+  modalOptionSubtext: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
 });

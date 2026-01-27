@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { User, CostCenter, ExpenseCategory } from '../../src/types';
 import { useRouter } from 'expo-router';
+import { COLORS } from '../../src/constants/colors';
 
 export default function AdminScreen() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function AdminScreen() {
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
   // Form states
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -54,6 +57,40 @@ export default function AdminScreen() {
     }
   };
 
+  const resetForm = () => {
+    setNewUserEmail('');
+    setNewUserName('');
+    setNewUserRole('user');
+    setNewCenterName('');
+    setNewCenterCode('');
+    setNewCategoryName('');
+    setEditMode(false);
+    setEditId(null);
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const openEditModal = (item: any) => {
+    setEditMode(true);
+    if (activeTab === 'users') {
+      setEditId(item.user_id);
+      setNewUserName(item.name);
+      setNewUserEmail(item.email);
+      setNewUserRole(item.role);
+    } else if (activeTab === 'centers') {
+      setEditId(item.center_id);
+      setNewCenterName(item.name);
+      setNewCenterCode(item.code);
+    } else if (activeTab === 'categories') {
+      setEditId(item.category_id);
+      setNewCategoryName(item.name);
+    }
+    setShowModal(true);
+  };
+
   const handleCreateUser = async () => {
     if (!newUserEmail || !newUserName) {
       Alert.alert('Error', 'Por favor completa todos los campos');
@@ -62,22 +99,52 @@ export default function AdminScreen() {
 
     try {
       setLoading(true);
-      await api.post('/api/admin/users', {
-        email: newUserEmail,
-        name: newUserName,
-        role: newUserRole,
-      });
-      Alert.alert('Éxito', 'Usuario creado');
+      if (editMode && editId) {
+        await api.put(`/api/admin/users/${editId}`, {
+          email: newUserEmail,
+          name: newUserName,
+          role: newUserRole,
+        });
+        Alert.alert('Éxito', 'Usuario actualizado');
+      } else {
+        const response = await api.post('/api/admin/users', {
+          email: newUserEmail,
+          name: newUserName,
+          role: newUserRole,
+        });
+        Alert.alert('Éxito', `Usuario creado. Contraseña temporal: ${response.data.temporary_password}`);
+      }
       setShowModal(false);
-      setNewUserEmail('');
-      setNewUserName('');
-      setNewUserRole('user');
+      resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al crear usuario');
+      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar usuario');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    Alert.alert(
+      'Eliminar Usuario',
+      `¿Estás seguro que deseas eliminar a ${userName}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/admin/users/${userId}`);
+              Alert.alert('Éxito', 'Usuario eliminado');
+              loadData();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.detail || 'Error al eliminar');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleCreateCostCenter = async () => {
@@ -88,20 +155,50 @@ export default function AdminScreen() {
 
     try {
       setLoading(true);
-      await api.post('/api/admin/cost-centers', {
-        name: newCenterName,
-        code: newCenterCode,
-      });
-      Alert.alert('Éxito', 'Centro de coste creado');
+      if (editMode && editId) {
+        await api.put(`/api/admin/cost-centers/${editId}`, {
+          name: newCenterName,
+          code: newCenterCode,
+        });
+        Alert.alert('Éxito', 'Centro de coste actualizado');
+      } else {
+        await api.post('/api/admin/cost-centers', {
+          name: newCenterName,
+          code: newCenterCode,
+        });
+        Alert.alert('Éxito', 'Centro de coste creado');
+      }
       setShowModal(false);
-      setNewCenterName('');
-      setNewCenterCode('');
+      resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al crear centro');
+      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar centro');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteCostCenter = async (centerId: string, centerName: string) => {
+    Alert.alert(
+      'Eliminar Centro de Coste',
+      `¿Estás seguro que deseas eliminar "${centerName}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/admin/cost-centers/${centerId}`);
+              Alert.alert('Éxito', 'Centro de coste eliminado');
+              loadData();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.detail || 'Error al eliminar');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleCreateCategory = async () => {
@@ -112,18 +209,48 @@ export default function AdminScreen() {
 
     try {
       setLoading(true);
-      await api.post('/api/admin/expense-categories', {
-        name: newCategoryName,
-      });
-      Alert.alert('Éxito', 'Categoría creada');
+      if (editMode && editId) {
+        await api.put(`/api/admin/expense-categories/${editId}`, {
+          name: newCategoryName,
+        });
+        Alert.alert('Éxito', 'Categoría actualizada');
+      } else {
+        await api.post('/api/admin/expense-categories', {
+          name: newCategoryName,
+        });
+        Alert.alert('Éxito', 'Categoría creada');
+      }
       setShowModal(false);
-      setNewCategoryName('');
+      resetForm();
       loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Error al crear categoría');
+      Alert.alert('Error', error.response?.data?.detail || 'Error al guardar categoría');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+    Alert.alert(
+      'Eliminar Categoría',
+      `¿Estás seguro que deseas eliminar "${categoryName}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/admin/expense-categories/${categoryId}`);
+              Alert.alert('Éxito', 'Categoría eliminada');
+              loadData();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.detail || 'Error al eliminar');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleExport = async () => {
@@ -195,15 +322,23 @@ export default function AdminScreen() {
           <View>
             {users.map((user) => (
               <View key={user.user_id} style={styles.listItem}>
-                <View style={styles.listItemLeft}>
-                  <Ionicons name="person-circle" size={40} color="#4F46E5" />
+                <TouchableOpacity style={styles.listItemLeft} onPress={() => openEditModal(user)}>
+                  <Ionicons name="person-circle" size={40} color={COLORS.primary} />
                   <View style={styles.listItemInfo}>
                     <Text style={styles.listItemTitle}>{user.name}</Text>
                     <Text style={styles.listItemSubtitle}>{user.email}</Text>
                   </View>
-                </View>
-                <View style={styles.roleBadge}>
-                  <Text style={styles.roleText}>{getRoleText(user.role)}</Text>
+                </TouchableOpacity>
+                <View style={styles.listItemRight}>
+                  <View style={styles.roleBadge}>
+                    <Text style={styles.roleText}>{getRoleText(user.role)}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteUser(user.user_id, user.name)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                  </TouchableOpacity>
                 </View>
               </View>
             ))}
@@ -214,19 +349,27 @@ export default function AdminScreen() {
           <View>
             {costCenters.map((center) => (
               <View key={center.center_id} style={styles.listItem}>
-                <View style={styles.listItemLeft}>
-                  <Ionicons name="business" size={40} color="#4F46E5" />
+                <TouchableOpacity style={styles.listItemLeft} onPress={() => openEditModal(center)}>
+                  <Ionicons name="business" size={40} color={COLORS.primary} />
                   <View style={styles.listItemInfo}>
                     <Text style={styles.listItemTitle}>{center.name}</Text>
                     <Text style={styles.listItemSubtitle}>{center.code}</Text>
                   </View>
+                </TouchableOpacity>
+                <View style={styles.listItemRight}>
+                  <View
+                    style={[
+                      styles.statusIndicator,
+                      { backgroundColor: center.active ? COLORS.success : COLORS.error },
+                    ]}
+                  />
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteCostCenter(center.center_id, center.name)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                  </TouchableOpacity>
                 </View>
-                <View
-                  style={[
-                    styles.statusIndicator,
-                    { backgroundColor: center.active ? '#10B981' : '#EF4444' },
-                  ]}
-                />
               </View>
             ))}
           </View>
@@ -236,22 +379,31 @@ export default function AdminScreen() {
           <View>
             {categories.map((category) => (
               <View key={category.category_id} style={styles.listItem}>
-                <View style={styles.listItemLeft}>
-                  <Ionicons name="pricetag" size={40} color="#4F46E5" />
+                <TouchableOpacity style={styles.listItemLeft} onPress={() => openEditModal(category)}>
+                  <Ionicons name="pricetag" size={40} color={COLORS.primary} />
                   <View style={styles.listItemInfo}>
                     <Text style={styles.listItemTitle}>{category.name}</Text>
                   </View>
+                </TouchableOpacity>
+                <View style={styles.listItemRight}>
+                  <View
+                    style={[
+                      styles.statusIndicator,
+                      { backgroundColor: category.active ? COLORS.success : COLORS.error },
+                    ]}
+                  />
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteCategory(category.category_id, category.name)}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+                  </TouchableOpacity>
                 </View>
-                <View
-                  style={[
-                    styles.statusIndicator,
-                    { backgroundColor: category.active ? '#10B981' : '#EF4444' },
-                  ]}
-                />
               </View>
             ))}
           </View>
         )}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       <View style={styles.footer}>
@@ -259,7 +411,7 @@ export default function AdminScreen() {
           <Ionicons name="download" size={20} color="#FFFFFF" />
           <Text style={styles.exportButtonText}>Exportar a Excel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)}>
+        <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
           <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -272,12 +424,13 @@ export default function AdminScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {activeTab === 'users' && 'Nuevo Usuario'}
-                {activeTab === 'centers' && 'Nuevo Centro de Coste'}
-                {activeTab === 'categories' && 'Nueva Categoría'}
+                {editMode ? 'Editar' : 'Nuevo'}{' '}
+                {activeTab === 'users' && 'Usuario'}
+                {activeTab === 'centers' && 'Centro de Coste'}
+                {activeTab === 'categories' && 'Categoría'}
               </Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
+              <TouchableOpacity onPress={() => { setShowModal(false); resetForm(); }}>
+                <Ionicons name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -288,7 +441,7 @@ export default function AdminScreen() {
                   placeholder="Nombre"
                   value={newUserName}
                   onChangeText={setNewUserName}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={COLORS.textMuted}
                 />
                 <TextInput
                   style={styles.input}
@@ -297,7 +450,7 @@ export default function AdminScreen() {
                   onChangeText={setNewUserEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={COLORS.textMuted}
                 />
                 <View style={styles.roleSelector}>
                   <TouchableOpacity
@@ -355,7 +508,7 @@ export default function AdminScreen() {
                   disabled={loading}
                 >
                   <Text style={styles.submitButtonText}>
-                    {loading ? 'Creando...' : 'Crear Usuario'}
+                    {loading ? 'Guardando...' : (editMode ? 'Actualizar' : 'Crear Usuario')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -368,14 +521,14 @@ export default function AdminScreen() {
                   placeholder="Nombre del Centro"
                   value={newCenterName}
                   onChangeText={setNewCenterName}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={COLORS.textMuted}
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Código"
                   value={newCenterCode}
                   onChangeText={setNewCenterCode}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={COLORS.textMuted}
                 />
                 <TouchableOpacity
                   style={styles.submitButton}
@@ -383,7 +536,7 @@ export default function AdminScreen() {
                   disabled={loading}
                 >
                   <Text style={styles.submitButtonText}>
-                    {loading ? 'Creando...' : 'Crear Centro'}
+                    {loading ? 'Guardando...' : (editMode ? 'Actualizar' : 'Crear Centro')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -396,7 +549,7 @@ export default function AdminScreen() {
                   placeholder="Nombre de la Categoría"
                   value={newCategoryName}
                   onChangeText={setNewCategoryName}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={COLORS.textMuted}
                 />
                 <TouchableOpacity
                   style={styles.submitButton}
@@ -404,7 +557,7 @@ export default function AdminScreen() {
                   disabled={loading}
                 >
                   <Text style={styles.submitButtonText}>
-                    {loading ? 'Creando...' : 'Crear Categoría'}
+                    {loading ? 'Guardando...' : (editMode ? 'Actualizar' : 'Crear Categoría')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -419,13 +572,13 @@ export default function AdminScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: COLORS.borderLight,
   },
   tab: {
     flex: 1,
@@ -435,15 +588,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#4F46E5',
+    borderBottomColor: COLORS.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: COLORS.textSecondary,
   },
   tabTextActive: {
-    color: '#4F46E5',
+    color: COLORS.primary,
   },
   content: {
     flex: 1,
@@ -452,16 +605,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     padding: 16,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   listItemLeft: {
     flexDirection: 'row',
@@ -475,15 +623,20 @@ const styles = StyleSheet.create({
   listItemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: COLORS.text,
   },
   listItemSubtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
+  listItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   roleBadge: {
-    backgroundColor: '#EEF2FF',
+    backgroundColor: COLORS.primaryBackground,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -491,12 +644,15 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: COLORS.primary,
   },
   statusIndicator: {
     width: 12,
     height: 12,
     borderRadius: 6,
+  },
+  deleteButton: {
+    padding: 8,
   },
   footer: {
     padding: 16,
@@ -506,7 +662,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: COLORS.success,
     paddingVertical: 12,
     borderRadius: 8,
   },
@@ -523,14 +679,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -538,7 +689,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -553,15 +704,15 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
   },
   input: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.background,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
     marginBottom: 16,
   },
   roleSelector: {
@@ -573,22 +724,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.background,
     alignItems: 'center',
   },
   roleOptionActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
   },
   roleOptionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
+    color: COLORS.textSecondary,
   },
   roleOptionTextActive: {
     color: '#FFFFFF',
   },
   submitButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
