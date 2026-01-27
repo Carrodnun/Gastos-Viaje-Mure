@@ -1,629 +1,634 @@
-diff --git a/frontend/app/index.tsx b/frontend/app/index.tsx
-index b2446bd..b1f0db3 100644
---- a/frontend/app/index.tsx
-+++ b/frontend/app/index.tsx
-@@ -1,5 +1,5 @@
--import React, { useEffect } from 'react';
--import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-+import React, { useEffect, useState } from 'react';
-+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
- import { useRouter } from 'expo-router';
- import { useAuthStore } from '../src/store/authStore';
- import LoadingScreen from '../src/components/LoadingScreen';
-@@ -8,6 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
- export default function Index() {
-   const router = useRouter();
-   const { user, isLoading, isAuthenticated, checkAuth, login } = useAuthStore();
-+  const [email, setEmail] = useState('');
-+  const [password, setPassword] = useState('');
-+  const [showPassword, setShowPassword] = useState(false);
-+  const [loggingIn, setLoggingIn] = useState(false);
- 
-   useEffect(() => {
-     checkAuth();
-@@ -19,6 +23,23 @@ export default function Index() {
-     }
-   }, [isAuthenticated, user]);
- 
-+  const handleLogin = async () => {
-+    if (!email || !password) {
-+      Alert.alert('Error', 'Por favor ingresa email y contraseña');
-+      return;
-+    }
-+
-+    try {
-+      setLoggingIn(true);
-+      await login(email, password);
-+      // Navigation will happen automatically via useEffect
-+    } catch (error: any) {
-+      Alert.alert('Error de Inicio de Sesión', error.message || 'Credenciales inválidas');
-+    } finally {
-+      setLoggingIn(false);
-+    }
-+  };
-+
-   if (isLoading) {
-     return <LoadingScreen />;
-   }
-@@ -28,7 +49,10 @@ export default function Index() {
-   }
- 
-   return (
--    <View style={styles.container}>
-+    <KeyboardAvoidingView
-+      style={styles.container}
-+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-+    >
-       <View style={styles.content}>
-         <View style={styles.iconContainer}>
-           <Ionicons name="airplane" size={80} color="#4F46E5" />
-@@ -36,34 +60,82 @@ export default function Index() {
-         
-         <Text style={styles.title}>Control de Gastos de Viaje</Text>
-         <Text style={styles.subtitle}>
--          Gestiona los gastos de viaje de tu empresa de forma simple y eficiente
-+          Gestiona los gastos de viaje de tu empresa
-         </Text>
- 
-+        <View style={styles.form}>
-+          <View style={styles.inputContainer}>
-+            <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-+            <TextInput
-+              style={styles.input}
-+              placeholder="Email"
-+              value={email}
-+              onChangeText={setEmail}
-+              keyboardType="email-address"
-+              autoCapitalize="none"
-+              autoCorrect={false}
-+              placeholderTextColor="#9CA3AF"
-+            />
-+          </View>
-+
-+          <View style={styles.inputContainer}>
-+            <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-+            <TextInput
-+              style={styles.input}
-+              placeholder="Contraseña"
-+              value={password}
-+              onChangeText={setPassword}
-+              secureTextEntry={!showPassword}
-+              autoCapitalize="none"
-+              autoCorrect={false}
-+              placeholderTextColor="#9CA3AF"
-+            />
-+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-+              <Ionicons 
-+                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-+                size={20} 
-+                color="#6B7280" 
-+              />
-+            </TouchableOpacity>
-+          </View>
-+
-+          <TouchableOpacity
-+            style={[styles.loginButton, loggingIn && styles.loginButtonDisabled]}
-+            onPress={handleLogin}
-+            disabled={loggingIn}
-+          >
-+            {loggingIn ? (
-+              <Text style={styles.loginButtonText}>Iniciando...</Text>
-+            ) : (
-+              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-+            )}
-+          </TouchableOpacity>
-+        </View>
-+
-         <View style={styles.features}>
-           <View style={styles.feature}>
--            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-             <Text style={styles.featureText}>Captura de tickets</Text>
-           </View>
-           <View style={styles.feature}>
--            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-             <Text style={styles.featureText}>Aprobación de viajes</Text>
-           </View>
-           <View style={styles.feature}>
--            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-             <Text style={styles.featureText}>Exportación a Excel</Text>
-           </View>
-         </View>
- 
--        <TouchableOpacity style={styles.loginButton} onPress={login}>
--          <Ionicons name="logo-google" size={24} color="#FFFFFF" />
--          <Text style={styles.loginButtonText}>Iniciar Sesión con Google</Text>
--        </TouchableOpacity>
--
-         <Text style={styles.footer}>
-           Si no tienes cuenta, contacta con tu administrador
-         </Text>
-+
-+        <Text style={styles.demoText}>
-+          Demo: admin@empresa.com / Admin123!
-+        </Text>
-       </View>
--    </View>
-+    </KeyboardAvoidingView>
-   );
- }
- 
-@@ -79,7 +151,7 @@ const styles = StyleSheet.create({
-     padding: 24,
-   },
-   iconContainer: {
--    marginBottom: 32,
-+    marginBottom: 24,
-     backgroundColor: '#EEF2FF',
-     padding: 24,
-     borderRadius: 100,
-@@ -89,55 +161,89 @@ const styles = StyleSheet.create({
-     fontWeight: 'bold',
-     color: '#111827',
-     textAlign: 'center',
--    marginBottom: 12,
-+    marginBottom: 8,
-   },
-   subtitle: {
-     fontSize: 16,
-     color: '#6B7280',
-     textAlign: 'center',
--    marginBottom: 40,
-+    marginBottom: 32,
-     lineHeight: 24,
-   },
--  features: {
-+  form: {
-     width: '100%',
--    marginBottom: 40,
-+    maxWidth: 400,
-+    marginBottom: 24,
-   },
--  feature: {
-+  inputContainer: {
-     flexDirection: 'row',
-     alignItems: 'center',
-+    backgroundColor: '#FFFFFF',
-+    borderWidth: 1,
-+    borderColor: '#D1D5DB',
-+    borderRadius: 12,
-     marginBottom: 16,
-+    paddingHorizontal: 16,
-   },
--  featureText: {
-+  inputIcon: {
-+    marginRight: 12,
-+  },
-+  input: {
-+    flex: 1,
-+    paddingVertical: 16,
-     fontSize: 16,
--    color: '#374151',
--    marginLeft: 12,
-+    color: '#111827',
-+  },
-+  eyeIcon: {
-+    padding: 4,
-   },
-   loginButton: {
--    flexDirection: 'row',
--    alignItems: 'center',
--    justifyContent: 'center',
-     backgroundColor: '#4F46E5',
-     paddingVertical: 16,
-     paddingHorizontal: 32,
-     borderRadius: 12,
-     width: '100%',
--    maxWidth: 400,
-+    alignItems: 'center',
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 2 },
-     shadowOpacity: 0.1,
-     shadowRadius: 4,
-     elevation: 3,
-+    marginTop: 8,
-+  },
-+  loginButtonDisabled: {
-+    backgroundColor: '#9CA3AF',
-   },
-   loginButtonText: {
-     color: '#FFFFFF',
-     fontSize: 16,
-     fontWeight: '600',
--    marginLeft: 12,
-+  },
-+  features: {
-+    width: '100%',
-+    marginBottom: 24,
-+  },
-+  feature: {
-+    flexDirection: 'row',
-+    alignItems: 'center',
-+    marginBottom: 12,
-+  },
-+  featureText: {
-+    fontSize: 14,
-+    color: '#374151',
-+    marginLeft: 8,
-   },
-   footer: {
--    marginTop: 24,
-+    marginTop: 16,
-     fontSize: 14,
-     color: '#9CA3AF',
-     textAlign: 'center',
-   },
-+  demoText: {
-+    marginTop: 8,
-+    fontSize: 12,
-+    color: '#4F46E5',
-+    textAlign: 'center',
-+    fontWeight: '600',
-+  },
- });
 diff --git a/model.patch b/model.patch
-index 6234c7a..720a9c0 100644
+index 24d5763..e69de29 100644
 --- a/model.patch
 +++ b/model.patch
-@@ -1,359 +0,0 @@
--diff --git a/frontend/src/store/authStore.ts b/frontend/src/store/authStore.ts
--index 88ccd9e..380231b 100644
----- a/frontend/src/store/authStore.ts
--+++ b/frontend/src/store/authStore.ts
--@@ -1,19 +1,18 @@
-- import { create } from 'zustand';
-- import { User } from '../types';
---import * as WebBrowser from 'expo-web-browser';
---import * as Linking from 'expo-linking';
---import { Platform } from 'react-native';
-- import axios from 'axios';
-- import Constants from 'expo-constants';
--+import AsyncStorage from '@react-native-async-storage/async-storage';
+@@ -1,629 +0,0 @@
+-diff --git a/frontend/app/index.tsx b/frontend/app/index.tsx
+-index b2446bd..b1f0db3 100644
+---- a/frontend/app/index.tsx
+-+++ b/frontend/app/index.tsx
+-@@ -1,5 +1,5 @@
+--import React, { useEffect } from 'react';
+--import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+-+import React, { useEffect, useState } from 'react';
+-+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+- import { useRouter } from 'expo-router';
+- import { useAuthStore } from '../src/store/authStore';
+- import LoadingScreen from '../src/components/LoadingScreen';
+-@@ -8,6 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
+- export default function Index() {
+-   const router = useRouter();
+-   const { user, isLoading, isAuthenticated, checkAuth, login } = useAuthStore();
+-+  const [email, setEmail] = useState('');
+-+  const [password, setPassword] = useState('');
+-+  const [showPassword, setShowPassword] = useState(false);
+-+  const [loggingIn, setLoggingIn] = useState(false);
 - 
-- const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL;
+-   useEffect(() => {
+-     checkAuth();
+-@@ -19,6 +23,23 @@ export default function Index() {
+-     }
+-   }, [isAuthenticated, user]);
 - 
-- interface AuthState {
--   user: User | null;
---  sessionToken: string | null;
--+  accessToken: string | null;
--   isLoading: boolean;
--   isAuthenticated: boolean;
---  login: () => Promise<void>;
--+  login: (email: string, password: string) => Promise<void>;
--+  register: (email: string, password: string, name: string) => Promise<void>;
--   logout: () => Promise<void>;
--   checkAuth: () => Promise<void>;
--   setUser: (user: User | null) => void;
--@@ -21,51 +20,58 @@ interface AuthState {
-- 
-- export const useAuthStore = create<AuthState>((set, get) => ({
--   user: null,
---  sessionToken: null,
--+  accessToken: null,
--   isLoading: true,
--   isAuthenticated: false,
-- 
--   setUser: (user) => set({ user, isAuthenticated: !!user }),
-- 
---  login: async () => {
--+  login: async (email: string, password: string) => {
--     try {
---      const redirectUrl = Platform.OS === 'web'
---        ? `${BACKEND_URL}/`
---        : Linking.createURL('/');
--+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
--+        email,
--+        password
--+      });
-- 
---      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
---
---      if (Platform.OS === 'web') {
---        window.location.href = authUrl;
---        return;
---      }
---
---      // Mobile flow
---      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
--+      const { user, access_token } = response.data;
--+      
--+      // Save token to AsyncStorage
--+      await AsyncStorage.setItem('access_token', access_token);
--       
---      if (result.type === 'success' && result.url) {
---        const url = result.url;
---        const sessionId = url.includes('#session_id=')
---          ? url.split('#session_id=')[1]?.split('&')[0]
---          : url.split('?session_id=')[1]?.split('&')[0];
--+      set({
--+        user,
--+        accessToken: access_token,
--+        isAuthenticated: true,
--+        isLoading: false
--+      });
--+    } catch (error: any) {
--+      console.error('Login error:', error.response?.data || error);
--+      throw new Error(error.response?.data?.detail || 'Login failed');
+-+  const handleLogin = async () => {
+-+    if (!email || !password) {
+-+      Alert.alert('Error', 'Por favor ingresa email y contraseña');
+-+      return;
 -+    }
--+  },
-- 
---        if (sessionId) {
---          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
---            session_id: sessionId
---          });
--+  register: async (email: string, password: string, name: string) => {
+-+
 -+    try {
--+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
--+        email,
--+        password,
--+        name
--+      });
-- 
---          const { user, session_token } = response.data;
---          set({
---            user,
---            sessionToken: session_token,
---            isAuthenticated: true,
---            isLoading: false
---          });
---        }
---      }
---    } catch (error) {
---      console.error('Login error:', error);
---      set({ isLoading: false });
--+      const { user, access_token } = response.data;
--+      
--+      // Save token to AsyncStorage
--+      await AsyncStorage.setItem('access_token', access_token);
--+      
--+      set({
--+        user,
--+        accessToken: access_token,
--+        isAuthenticated: true,
--+        isLoading: false
--+      });
+-+      setLoggingIn(true);
+-+      await login(email, password);
+-+      // Navigation will happen automatically via useEffect
 -+    } catch (error: any) {
--+      console.error('Register error:', error.response?.data || error);
--+      throw new Error(error.response?.data?.detail || 'Registration failed');
--     }
--   },
-- 
--@@ -73,70 +79,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
--     try {
--       set({ isLoading: true });
--       
---      // Check for session_id in URL (web)
---      if (Platform.OS === 'web' && typeof window !== 'undefined') {
---        const hash = window.location.hash;
---        const query = window.location.search;
---        
---        const sessionId = hash.includes('session_id=')
---          ? hash.split('session_id=')[1]?.split('&')[0]
---          : query.includes('session_id=')
---          ? query.split('session_id=')[1]?.split('&')[0]
---          : null;
---
---        if (sessionId) {
---          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
---            session_id: sessionId
---          }, { withCredentials: true });
---
---          const { user, session_token } = response.data;
---          set({
---            user,
---            sessionToken: session_token,
---            isAuthenticated: true,
---            isLoading: false
---          });
---          
---          // Clean URL
---          window.history.replaceState({}, document.title, window.location.pathname);
---          return;
---        }
--+      // Get token from AsyncStorage
--+      const token = await AsyncStorage.getItem('access_token');
--+      
--+      if (!token) {
--+        set({ isLoading: false, isAuthenticated: false });
--+        return;
--       }
-- 
---      // Try to get current user with existing session
---      const state = get();
---      if (state.sessionToken || Platform.OS === 'web') {
---        const config = state.sessionToken
---          ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
---          : { withCredentials: true };
---        
---        const response = await axios.get(`${BACKEND_URL}/api/auth/me`, config);
---        set({
---          user: response.data,
---          isAuthenticated: true,
---          isLoading: false
---        });
---      } else {
---        set({ isLoading: false });
---      }
--+      // Try to get current user with token
--+      const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
--+        headers: { Authorization: `Bearer ${token}` }
--+      });
--+      
--+      set({
--+        user: response.data,
--+        accessToken: token,
--+        isAuthenticated: true,
--+        isLoading: false
--+      });
--     } catch (error) {
--       console.log('Not authenticated');
---      set({ user: null, isAuthenticated: false, isLoading: false });
--+      await AsyncStorage.removeItem('access_token');
--+      set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
--     }
--   },
-- 
--   logout: async () => {
--     try {
--       const state = get();
---      const config = state.sessionToken
---        ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
---        : { withCredentials: true };
---      
---      await axios.post(`${BACKEND_URL}/api/auth/logout`, {}, config);
--+      if (state.accessToken) {
--+        await axios.post(
--+          `${BACKEND_URL}/api/auth/logout`,
--+          {},
--+          { headers: { Authorization: `Bearer ${state.accessToken}` } }
--+        );
--+      }
--     } catch (error) {
--       console.error('Logout error:', error);
--     } finally {
---      set({ user: null, sessionToken: null, isAuthenticated: false });
--+      await AsyncStorage.removeItem('access_token');
--+      set({ user: null, accessToken: null, isAuthenticated: false });
--     }
+-+      Alert.alert('Error de Inicio de Sesión', error.message || 'Credenciales inválidas');
+-+    } finally {
+-+      setLoggingIn(false);
+-+    }
+-+  };
+-+
+-   if (isLoading) {
+-     return <LoadingScreen />;
 -   }
-- }));
+-@@ -28,7 +49,10 @@ export default function Index() {
+-   }
+- 
+-   return (
+--    <View style={styles.container}>
+-+    <KeyboardAvoidingView
+-+      style={styles.container}
+-+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+-+    >
+-       <View style={styles.content}>
+-         <View style={styles.iconContainer}>
+-           <Ionicons name="airplane" size={80} color="#4F46E5" />
+-@@ -36,34 +60,82 @@ export default function Index() {
+-         
+-         <Text style={styles.title}>Control de Gastos de Viaje</Text>
+-         <Text style={styles.subtitle}>
+--          Gestiona los gastos de viaje de tu empresa de forma simple y eficiente
+-+          Gestiona los gastos de viaje de tu empresa
+-         </Text>
+- 
+-+        <View style={styles.form}>
+-+          <View style={styles.inputContainer}>
+-+            <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+-+            <TextInput
+-+              style={styles.input}
+-+              placeholder="Email"
+-+              value={email}
+-+              onChangeText={setEmail}
+-+              keyboardType="email-address"
+-+              autoCapitalize="none"
+-+              autoCorrect={false}
+-+              placeholderTextColor="#9CA3AF"
+-+            />
+-+          </View>
+-+
+-+          <View style={styles.inputContainer}>
+-+            <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+-+            <TextInput
+-+              style={styles.input}
+-+              placeholder="Contraseña"
+-+              value={password}
+-+              onChangeText={setPassword}
+-+              secureTextEntry={!showPassword}
+-+              autoCapitalize="none"
+-+              autoCorrect={false}
+-+              placeholderTextColor="#9CA3AF"
+-+            />
+-+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+-+              <Ionicons 
+-+                name={showPassword ? "eye-off-outline" : "eye-outline"} 
+-+                size={20} 
+-+                color="#6B7280" 
+-+              />
+-+            </TouchableOpacity>
+-+          </View>
+-+
+-+          <TouchableOpacity
+-+            style={[styles.loginButton, loggingIn && styles.loginButtonDisabled]}
+-+            onPress={handleLogin}
+-+            disabled={loggingIn}
+-+          >
+-+            {loggingIn ? (
+-+              <Text style={styles.loginButtonText}>Iniciando...</Text>
+-+            ) : (
+-+              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+-+            )}
+-+          </TouchableOpacity>
+-+        </View>
+-+
+-         <View style={styles.features}>
+-           <View style={styles.feature}>
+--            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+-+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+-             <Text style={styles.featureText}>Captura de tickets</Text>
+-           </View>
+-           <View style={styles.feature}>
+--            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+-+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+-             <Text style={styles.featureText}>Aprobación de viajes</Text>
+-           </View>
+-           <View style={styles.feature}>
+--            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+-+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+-             <Text style={styles.featureText}>Exportación a Excel</Text>
+-           </View>
+-         </View>
+- 
+--        <TouchableOpacity style={styles.loginButton} onPress={login}>
+--          <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+--          <Text style={styles.loginButtonText}>Iniciar Sesión con Google</Text>
+--        </TouchableOpacity>
+--
+-         <Text style={styles.footer}>
+-           Si no tienes cuenta, contacta con tu administrador
+-         </Text>
+-+
+-+        <Text style={styles.demoText}>
+-+          Demo: admin@empresa.com / Admin123!
+-+        </Text>
+-       </View>
+--    </View>
+-+    </KeyboardAvoidingView>
+-   );
+- }
+- 
+-@@ -79,7 +151,7 @@ const styles = StyleSheet.create({
+-     padding: 24,
+-   },
+-   iconContainer: {
+--    marginBottom: 32,
+-+    marginBottom: 24,
+-     backgroundColor: '#EEF2FF',
+-     padding: 24,
+-     borderRadius: 100,
+-@@ -89,55 +161,89 @@ const styles = StyleSheet.create({
+-     fontWeight: 'bold',
+-     color: '#111827',
+-     textAlign: 'center',
+--    marginBottom: 12,
+-+    marginBottom: 8,
+-   },
+-   subtitle: {
+-     fontSize: 16,
+-     color: '#6B7280',
+-     textAlign: 'center',
+--    marginBottom: 40,
+-+    marginBottom: 32,
+-     lineHeight: 24,
+-   },
+--  features: {
+-+  form: {
+-     width: '100%',
+--    marginBottom: 40,
+-+    maxWidth: 400,
+-+    marginBottom: 24,
+-   },
+--  feature: {
+-+  inputContainer: {
+-     flexDirection: 'row',
+-     alignItems: 'center',
+-+    backgroundColor: '#FFFFFF',
+-+    borderWidth: 1,
+-+    borderColor: '#D1D5DB',
+-+    borderRadius: 12,
+-     marginBottom: 16,
+-+    paddingHorizontal: 16,
+-   },
+--  featureText: {
+-+  inputIcon: {
+-+    marginRight: 12,
+-+  },
+-+  input: {
+-+    flex: 1,
+-+    paddingVertical: 16,
+-     fontSize: 16,
+--    color: '#374151',
+--    marginLeft: 12,
+-+    color: '#111827',
+-+  },
+-+  eyeIcon: {
+-+    padding: 4,
+-   },
+-   loginButton: {
+--    flexDirection: 'row',
+--    alignItems: 'center',
+--    justifyContent: 'center',
+-     backgroundColor: '#4F46E5',
+-     paddingVertical: 16,
+-     paddingHorizontal: 32,
+-     borderRadius: 12,
+-     width: '100%',
+--    maxWidth: 400,
+-+    alignItems: 'center',
+-     shadowColor: '#000',
+-     shadowOffset: { width: 0, height: 2 },
+-     shadowOpacity: 0.1,
+-     shadowRadius: 4,
+-     elevation: 3,
+-+    marginTop: 8,
+-+  },
+-+  loginButtonDisabled: {
+-+    backgroundColor: '#9CA3AF',
+-   },
+-   loginButtonText: {
+-     color: '#FFFFFF',
+-     fontSize: 16,
+-     fontWeight: '600',
+--    marginLeft: 12,
+-+  },
+-+  features: {
+-+    width: '100%',
+-+    marginBottom: 24,
+-+  },
+-+  feature: {
+-+    flexDirection: 'row',
+-+    alignItems: 'center',
+-+    marginBottom: 12,
+-+  },
+-+  featureText: {
+-+    fontSize: 14,
+-+    color: '#374151',
+-+    marginLeft: 8,
+-   },
+-   footer: {
+--    marginTop: 24,
+-+    marginTop: 16,
+-     fontSize: 14,
+-     color: '#9CA3AF',
+-     textAlign: 'center',
+-   },
+-+  demoText: {
+-+    marginTop: 8,
+-+    fontSize: 12,
+-+    color: '#4F46E5',
+-+    textAlign: 'center',
+-+    fontWeight: '600',
+-+  },
+- });
 -diff --git a/model.patch b/model.patch
--index 1a0abd8..15e62a0 100644
+-index 6234c7a..720a9c0 100644
 ---- a/model.patch
 -+++ b/model.patch
--@@ -1,133 +0,0 @@
---diff --git a/README_EXPENSE_APP.md b/README_EXPENSE_APP.md
---index 3f4f0da..86bf2a0 100644
------ a/README_EXPENSE_APP.md
---+++ b/README_EXPENSE_APP.md
---@@ -201,7 +201,7 @@ Todas las acciones importantes quedan registradas:
--- 6. **OCR** para extraer datos automáticamente de tickets
+-@@ -1,359 +0,0 @@
+--diff --git a/frontend/src/store/authStore.ts b/frontend/src/store/authStore.ts
+--index 88ccd9e..380231b 100644
+----- a/frontend/src/store/authStore.ts
+--+++ b/frontend/src/store/authStore.ts
+--@@ -1,19 +1,18 @@
+-- import { create } from 'zustand';
+-- import { User } from '../types';
+---import * as WebBrowser from 'expo-web-browser';
+---import * as Linking from 'expo-linking';
+---import { Platform } from 'react-native';
+-- import axios from 'axios';
+-- import Constants from 'expo-constants';
+--+import AsyncStorage from '@react-native-async-storage/async-storage';
 -- 
--- ### Testing
----- Probar autenticación con cuentas Microsoft reales
---+- Probar autenticación con cuentas Google reales
--- - Verificar flujo completo usuario → autorizador → admin
--- - Testear captura de cámara en dispositivos físicos
--- - Validar exportación Excel con datos reales
+-- const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL;
+-- 
+-- interface AuthState {
+--   user: User | null;
+---  sessionToken: string | null;
+--+  accessToken: string | null;
+--   isLoading: boolean;
+--   isAuthenticated: boolean;
+---  login: () => Promise<void>;
+--+  login: (email: string, password: string) => Promise<void>;
+--+  register: (email: string, password: string, name: string) => Promise<void>;
+--   logout: () => Promise<void>;
+--   checkAuth: () => Promise<void>;
+--   setUser: (user: User | null) => void;
+--@@ -21,51 +20,58 @@ interface AuthState {
+-- 
+-- export const useAuthStore = create<AuthState>((set, get) => ({
+--   user: null,
+---  sessionToken: null,
+--+  accessToken: null,
+--   isLoading: true,
+--   isAuthenticated: false,
+-- 
+--   setUser: (user) => set({ user, isAuthenticated: !!user }),
+-- 
+---  login: async () => {
+--+  login: async (email: string, password: string) => {
+--     try {
+---      const redirectUrl = Platform.OS === 'web'
+---        ? `${BACKEND_URL}/`
+---        : Linking.createURL('/');
+--+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
+--+        email,
+--+        password
+--+      });
+-- 
+---      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+---
+---      if (Platform.OS === 'web') {
+---        window.location.href = authUrl;
+---        return;
+---      }
+---
+---      // Mobile flow
+---      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+--+      const { user, access_token } = response.data;
+--+      
+--+      // Save token to AsyncStorage
+--+      await AsyncStorage.setItem('access_token', access_token);
+--       
+---      if (result.type === 'success' && result.url) {
+---        const url = result.url;
+---        const sessionId = url.includes('#session_id=')
+---          ? url.split('#session_id=')[1]?.split('&')[0]
+---          : url.split('?session_id=')[1]?.split('&')[0];
+--+      set({
+--+        user,
+--+        accessToken: access_token,
+--+        isAuthenticated: true,
+--+        isLoading: false
+--+      });
+--+    } catch (error: any) {
+--+      console.error('Login error:', error.response?.data || error);
+--+      throw new Error(error.response?.data?.detail || 'Login failed');
+--+    }
+--+  },
+-- 
+---        if (sessionId) {
+---          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
+---            session_id: sessionId
+---          });
+--+  register: async (email: string, password: string, name: string) => {
+--+    try {
+--+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
+--+        email,
+--+        password,
+--+        name
+--+      });
+-- 
+---          const { user, session_token } = response.data;
+---          set({
+---            user,
+---            sessionToken: session_token,
+---            isAuthenticated: true,
+---            isLoading: false
+---          });
+---        }
+---      }
+---    } catch (error) {
+---      console.error('Login error:', error);
+---      set({ isLoading: false });
+--+      const { user, access_token } = response.data;
+--+      
+--+      // Save token to AsyncStorage
+--+      await AsyncStorage.setItem('access_token', access_token);
+--+      
+--+      set({
+--+        user,
+--+        accessToken: access_token,
+--+        isAuthenticated: true,
+--+        isLoading: false
+--+      });
+--+    } catch (error: any) {
+--+      console.error('Register error:', error.response?.data || error);
+--+      throw new Error(error.response?.data?.detail || 'Registration failed');
+--     }
+--   },
+-- 
+--@@ -73,70 +79,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
+--     try {
+--       set({ isLoading: true });
+--       
+---      // Check for session_id in URL (web)
+---      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+---        const hash = window.location.hash;
+---        const query = window.location.search;
+---        
+---        const sessionId = hash.includes('session_id=')
+---          ? hash.split('session_id=')[1]?.split('&')[0]
+---          : query.includes('session_id=')
+---          ? query.split('session_id=')[1]?.split('&')[0]
+---          : null;
+---
+---        if (sessionId) {
+---          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
+---            session_id: sessionId
+---          }, { withCredentials: true });
+---
+---          const { user, session_token } = response.data;
+---          set({
+---            user,
+---            sessionToken: session_token,
+---            isAuthenticated: true,
+---            isLoading: false
+---          });
+---          
+---          // Clean URL
+---          window.history.replaceState({}, document.title, window.location.pathname);
+---          return;
+---        }
+--+      // Get token from AsyncStorage
+--+      const token = await AsyncStorage.getItem('access_token');
+--+      
+--+      if (!token) {
+--+        set({ isLoading: false, isAuthenticated: false });
+--+        return;
+--       }
+-- 
+---      // Try to get current user with existing session
+---      const state = get();
+---      if (state.sessionToken || Platform.OS === 'web') {
+---        const config = state.sessionToken
+---          ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
+---          : { withCredentials: true };
+---        
+---        const response = await axios.get(`${BACKEND_URL}/api/auth/me`, config);
+---        set({
+---          user: response.data,
+---          isAuthenticated: true,
+---          isLoading: false
+---        });
+---      } else {
+---        set({ isLoading: false });
+---      }
+--+      // Try to get current user with token
+--+      const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
+--+        headers: { Authorization: `Bearer ${token}` }
+--+      });
+--+      
+--+      set({
+--+        user: response.data,
+--+        accessToken: token,
+--+        isAuthenticated: true,
+--+        isLoading: false
+--+      });
+--     } catch (error) {
+--       console.log('Not authenticated');
+---      set({ user: null, isAuthenticated: false, isLoading: false });
+--+      await AsyncStorage.removeItem('access_token');
+--+      set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+--     }
+--   },
+-- 
+--   logout: async () => {
+--     try {
+--       const state = get();
+---      const config = state.sessionToken
+---        ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
+---        : { withCredentials: true };
+---      
+---      await axios.post(`${BACKEND_URL}/api/auth/logout`, {}, config);
+--+      if (state.accessToken) {
+--+        await axios.post(
+--+          `${BACKEND_URL}/api/auth/logout`,
+--+          {},
+--+          { headers: { Authorization: `Bearer ${state.accessToken}` } }
+--+        );
+--+      }
+--     } catch (error) {
+--       console.error('Logout error:', error);
+--     } finally {
+---      set({ user: null, sessionToken: null, isAuthenticated: false });
+--+      await AsyncStorage.removeItem('access_token');
+--+      set({ user: null, accessToken: null, isAuthenticated: false });
+--     }
+--   }
+-- }));
 --diff --git a/model.patch b/model.patch
---index ef3146d..e69de29 100644
+--index 1a0abd8..15e62a0 100644
 ----- a/model.patch
 --+++ b/model.patch
---@@ -1,115 +0,0 @@
----diff --git a/frontend/app/_layout.tsx b/frontend/app/_layout.tsx
----index f7d8fac..ac34b51 100644
------- a/frontend/app/_layout.tsx
----+++ b/frontend/app/_layout.tsx
----@@ -1,37 +1,43 @@
---- import { Stack } from 'expo-router';
---- import { GestureHandlerRootView } from 'react-native-gesture-handler';
---- import React from 'react';
----+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
----+import { useColorScheme } from 'react-native';
+--@@ -1,133 +0,0 @@
+---diff --git a/README_EXPENSE_APP.md b/README_EXPENSE_APP.md
+---index 3f4f0da..86bf2a0 100644
+------ a/README_EXPENSE_APP.md
+---+++ b/README_EXPENSE_APP.md
+---@@ -201,7 +201,7 @@ Todas las acciones importantes quedan registradas:
+--- 6. **OCR** para extraer datos automáticamente de tickets
 --- 
---- export default function RootLayout() {
----+  const colorScheme = useColorScheme();
----+
----   return (
----     <GestureHandlerRootView style={{ flex: 1 }}>
-----      <Stack 
-----        screenOptions={{ 
-----          headerShown: false,
-----          contentStyle: { backgroundColor: '#F9FAFB' }
-----        }}
-----      >
-----        <Stack.Screen 
-----          name="index" 
-----          options={{ headerShown: false }}
-----        />
-----        <Stack.Screen 
-----          name="(tabs)" 
-----          options={{ headerShown: false }}
-----        />
-----        <Stack.Screen 
-----          name="trip/[id]" 
-----          options={{ headerShown: false }}
-----        />
-----        <Stack.Screen 
-----          name="expense/create" 
-----          options={{ headerShown: false, presentation: 'modal' }}
-----        />
-----        <Stack.Screen 
-----          name="expense/[id]" 
-----          options={{ headerShown: false }}
-----        />
-----      </Stack>
----+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
----+        <Stack 
----+          screenOptions={{ 
----+            headerShown: false,
----+            contentStyle: { backgroundColor: '#F9FAFB' }
----+          }}
----+        >
----+          <Stack.Screen 
----+            name="index" 
----+            options={{ headerShown: false }}
----+          />
----+          <Stack.Screen 
----+            name="(tabs)" 
----+            options={{ headerShown: false }}
----+          />
----+          <Stack.Screen 
----+            name="trip/[id]" 
----+            options={{ headerShown: false }}
----+          />
----+          <Stack.Screen 
----+            name="expense/create" 
----+            options={{ headerShown: false, presentation: 'modal' }}
----+          />
----+          <Stack.Screen 
----+            name="expense/[id]" 
----+            options={{ headerShown: false }}
----+          />
----+        </Stack>
----+      </ThemeProvider>
----     </GestureHandlerRootView>
----   );
---- }
+--- ### Testing
+----- Probar autenticación con cuentas Microsoft reales
+---+- Probar autenticación con cuentas Google reales
+--- - Verificar flujo completo usuario → autorizador → admin
+--- - Testear captura de cámara en dispositivos físicos
+--- - Validar exportación Excel con datos reales
 ---diff --git a/model.patch b/model.patch
----index ef109f6..e69de29 100644
+---index ef3146d..e69de29 100644
 ------ a/model.patch
 ---+++ b/model.patch
----@@ -1,35 +0,0 @@
+---@@ -1,115 +0,0 @@
+----diff --git a/frontend/app/_layout.tsx b/frontend/app/_layout.tsx
+----index f7d8fac..ac34b51 100644
+------- a/frontend/app/_layout.tsx
+----+++ b/frontend/app/_layout.tsx
+----@@ -1,37 +1,43 @@
+---- import { Stack } from 'expo-router';
+---- import { GestureHandlerRootView } from 'react-native-gesture-handler';
+---- import React from 'react';
+----+import { ThemeProvider, DarkTheme, DefaultTheme } from '@react-navigation/native';
+----+import { useColorScheme } from 'react-native';
+---- 
+---- export default function RootLayout() {
+----+  const colorScheme = useColorScheme();
+----+
+----   return (
+----     <GestureHandlerRootView style={{ flex: 1 }}>
+-----      <Stack 
+-----        screenOptions={{ 
+-----          headerShown: false,
+-----          contentStyle: { backgroundColor: '#F9FAFB' }
+-----        }}
+-----      >
+-----        <Stack.Screen 
+-----          name="index" 
+-----          options={{ headerShown: false }}
+-----        />
+-----        <Stack.Screen 
+-----          name="(tabs)" 
+-----          options={{ headerShown: false }}
+-----        />
+-----        <Stack.Screen 
+-----          name="trip/[id]" 
+-----          options={{ headerShown: false }}
+-----        />
+-----        <Stack.Screen 
+-----          name="expense/create" 
+-----          options={{ headerShown: false, presentation: 'modal' }}
+-----        />
+-----        <Stack.Screen 
+-----          name="expense/[id]" 
+-----          options={{ headerShown: false }}
+-----        />
+-----      </Stack>
+----+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+----+        <Stack 
+----+          screenOptions={{ 
+----+            headerShown: false,
+----+            contentStyle: { backgroundColor: '#F9FAFB' }
+----+          }}
+----+        >
+----+          <Stack.Screen 
+----+            name="index" 
+----+            options={{ headerShown: false }}
+----+          />
+----+          <Stack.Screen 
+----+            name="(tabs)" 
+----+            options={{ headerShown: false }}
+----+          />
+----+          <Stack.Screen 
+----+            name="trip/[id]" 
+----+            options={{ headerShown: false }}
+----+          />
+----+          <Stack.Screen 
+----+            name="expense/create" 
+----+            options={{ headerShown: false, presentation: 'modal' }}
+----+          />
+----+          <Stack.Screen 
+----+            name="expense/[id]" 
+----+            options={{ headerShown: false }}
+----+          />
+----+        </Stack>
+----+      </ThemeProvider>
+----     </GestureHandlerRootView>
+----   );
+---- }
 ----diff --git a/model.patch b/model.patch
-----index 2f45a58..e69de29 100644
+----index ef109f6..e69de29 100644
 ------- a/model.patch
 ----+++ b/model.patch
-----@@ -1,30 +0,0 @@
------diff --git a/frontend/app/trip/[id].tsx b/frontend/app/trip/[id].tsx
------index 83c0b19..61238ec 100644
--------- a/frontend/app/trip/[id].tsx
------+++ b/frontend/app/trip/[id].tsx
------@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
------ import api from '../../src/utils/api';
------ import { Trip, Expense, User } from '../../src/types';
------ import { useAuthStore } from '../../src/store/authStore';
-------import { format } from 'date-fns';
------ 
------ export default function TripDetailScreen() {
------   const { id } = useLocalSearchParams();
------@@ -133,7 +132,7 @@ export default function TripDetailScreen() {
------           <View style={styles.infoRow}>
------             <Ionicons name="calendar-outline" size={20} color="#6B7280" />
------             <Text style={styles.infoText}>
-------              Creado: {format(new Date(trip.created_at), 'dd MMM yyyy', { locale: es })}
------+              Creado: {new Date(trip.created_at).toLocaleDateString('es-ES')}
------             </Text>
------           </View>
------           <View style={styles.infoRow}>
------@@ -196,7 +195,7 @@ export default function TripDetailScreen() {
------                 </View>
------                 <View style={styles.expenseDate}>
------                   <Text style={styles.expenseDateText}>
-------                    {format(new Date(expense.date), 'dd MMM', { locale: es })}
------+                    {new Date(expense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
------                   </Text>
------                 </View>
------               </View>
+----@@ -1,35 +0,0 @@
+-----diff --git a/model.patch b/model.patch
+-----index 2f45a58..e69de29 100644
+-------- a/model.patch
+-----+++ b/model.patch
+-----@@ -1,30 +0,0 @@
+------diff --git a/frontend/app/trip/[id].tsx b/frontend/app/trip/[id].tsx
+------index 83c0b19..61238ec 100644
+--------- a/frontend/app/trip/[id].tsx
+------+++ b/frontend/app/trip/[id].tsx
+------@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
+------ import api from '../../src/utils/api';
+------ import { Trip, Expense, User } from '../../src/types';
+------ import { useAuthStore } from '../../src/store/authStore';
+-------import { format } from 'date-fns';
+------ 
+------ export default function TripDetailScreen() {
+------   const { id } = useLocalSearchParams();
+------@@ -133,7 +132,7 @@ export default function TripDetailScreen() {
+------           <View style={styles.infoRow}>
+------             <Ionicons name="calendar-outline" size={20} color="#6B7280" />
+------             <Text style={styles.infoText}>
+-------              Creado: {format(new Date(trip.created_at), 'dd MMM yyyy', { locale: es })}
+------+              Creado: {new Date(trip.created_at).toLocaleDateString('es-ES')}
+------             </Text>
+------           </View>
+------           <View style={styles.infoRow}>
+------@@ -196,7 +195,7 @@ export default function TripDetailScreen() {
+------                 </View>
+------                 <View style={styles.expenseDate}>
+------                   <Text style={styles.expenseDateText}>
+-------                    {format(new Date(expense.date), 'dd MMM', { locale: es })}
+------+                    {new Date(expense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+------                   </Text>
+------                 </View>
+------               </View>
