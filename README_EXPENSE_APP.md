@@ -28,7 +28,7 @@ Aplicación móvil completa para gestionar y controlar los gastos de viaje de lo
 ### Backend ✅
 - **Framework**: FastAPI con Python
 - **Base de datos**: MongoDB
-- **Autenticación**: Microsoft OAuth via Emergent Auth
+- **Autenticación**: Google OAuth via Emergent Auth
 - **API REST completa** con endpoints para:
   - Gestión de usuarios
   - Viajes y aprobaciones
