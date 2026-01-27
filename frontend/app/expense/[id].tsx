@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { Expense, User, ExpenseCategory } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
-import { format } from 'date-fns';
 
 export default function ExpenseDetailScreen() {
   const { id } = useLocalSearchParams();
