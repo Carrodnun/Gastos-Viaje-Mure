@@ -22,13 +22,11 @@ export default function TabsLayout() {
           fontSize: 12,
           fontWeight: '600',
         },
+        headerShown: true,
         headerStyle: {
           backgroundColor: '#4F46E5',
         },
         headerTintColor: '#FFFFFF',
-        headerTitleStyle: {
-          fontWeight: '700',
-        },
       }}
     >
       <Tabs.Screen
