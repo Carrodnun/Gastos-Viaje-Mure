@@ -452,6 +452,28 @@ async def update_cost_center(
     
     return {"message": "Cost center updated"}
 
+@app.delete("/api/admin/cost-centers/{center_id}")
+async def delete_cost_center(
+    center_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    await require_role(current_user, ["admin"])
+    
+    # Check if any trips use this cost center
+    trip_count = await db.trips.count_documents({"cost_center_id": center_id})
+    if trip_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete: {trip_count} trip(s) use this cost center"
+        )
+    
+    result = await db.cost_centers.delete_one({"center_id": center_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cost center not found")
+    
+    return {"message": "Cost center deleted"}
+
 # Admin Endpoints - Expense Categories
 @app.post("/api/admin/expense-categories")
 async def create_expense_category(
