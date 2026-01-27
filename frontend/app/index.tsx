@@ -55,8 +55,8 @@ export default function Index() {
         </View>
 
         <TouchableOpacity style={styles.loginButton} onPress={login}>
-          <Ionicons name="logo-microsoft" size={24} color="#FFFFFF" />
-          <Text style={styles.loginButtonText}>Iniciar Sesión con Microsoft</Text>
+          <Ionicons name="logo-google" size={24} color="#FFFFFF" />
+          <Text style={styles.loginButtonText}>Iniciar Sesión con Google</Text>
         </TouchableOpacity>
 
         <Text style={styles.footer}>
