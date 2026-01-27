@@ -1,27 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname, useNavigationContainerRef } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import LoadingScreen from '../src/components/LoadingScreen';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function Index() {
   const router = useRouter();
+  const pathname = usePathname();
+  const navigationRef = useNavigationContainerRef();
   const { user, isLoading, isAuthenticated, checkAuth, login } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [navReady, setNavReady] = useState(false);
+
+  useEffect(() => {
+    // Wait for navigation to be ready
+    const checkNavReady = setInterval(() => {
+      if (navigationRef?.isReady()) {
+        setNavReady(true);
+        clearInterval(checkNavReady);
+      }
+    }, 100);
+
+    return () => clearInterval(checkNavReady);
+  }, [navigationRef]);
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      router.replace('/(tabs)/home');
+    // Only navigate when both authenticated AND navigation is ready
+    if (isAuthenticated && user && navReady && pathname === '/') {
+      // Small delay to ensure navigation is fully mounted
+      setTimeout(() => {
+        try {
+          router.replace('/(tabs)/home');
+        } catch (error) {
+          console.log('Navigation not ready yet');
+        }
+      }, 100);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, navReady, pathname]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -44,7 +67,7 @@ export default function Index() {
     return <LoadingScreen />;
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && !navReady) {
     return <LoadingScreen />;
   }
 
