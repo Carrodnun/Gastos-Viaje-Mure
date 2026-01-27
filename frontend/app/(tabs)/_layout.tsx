@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
+import { COLORS } from '../../src/constants/colors';
 
 export default function TabsLayout() {
   const user = useAuthStore((state) => state.user);
@@ -8,12 +9,12 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#4F46E5',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: COLORS.card,
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: COLORS.borderLight,
           paddingBottom: 8,
           paddingTop: 8,
           height: 60,
@@ -24,7 +25,7 @@ export default function TabsLayout() {
         },
         headerShown: true,
         headerStyle: {
-          backgroundColor: '#4F46E5',
+          backgroundColor: COLORS.primary,
         },
         headerTintColor: '#FFFFFF',
       }}

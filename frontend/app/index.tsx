@@ -4,6 +4,7 @@ import { useRouter, usePathname, useNavigationContainerRef } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import LoadingScreen from '../src/components/LoadingScreen';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../src/constants/colors';
 
 export default function Index() {
   const router = useRouter();
@@ -17,7 +18,6 @@ export default function Index() {
   const [navReady, setNavReady] = useState(false);
 
   useEffect(() => {
-    // Wait for navigation to be ready
     const checkNavReady = setInterval(() => {
       if (navigationRef?.isReady()) {
         setNavReady(true);
@@ -33,9 +33,7 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-    // Only navigate when both authenticated AND navigation is ready
     if (isAuthenticated && user && navReady && pathname === '/') {
-      // Small delay to ensure navigation is fully mounted
       setTimeout(() => {
         try {
           router.replace('/(tabs)/home');
@@ -55,7 +53,6 @@ export default function Index() {
     try {
       setLoggingIn(true);
       await login(email, password);
-      // Navigation will happen automatically via useEffect
     } catch (error: any) {
       Alert.alert('Error de Inicio de Sesión', error.message || 'Credenciales inválidas');
     } finally {
@@ -78,7 +75,7 @@ export default function Index() {
     >
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="airplane" size={80} color="#4F46E5" />
+          <Ionicons name="airplane" size={80} color={COLORS.primary} />
         </View>
         
         <Text style={styles.title}>Control de Gastos de Viaje</Text>
@@ -88,7 +85,7 @@ export default function Index() {
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+            <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -97,12 +94,12 @@ export default function Index() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+            <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
@@ -111,13 +108,13 @@ export default function Index() {
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoCorrect={false}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
               <Ionicons 
                 name={showPassword ? "eye-off-outline" : "eye-outline"} 
                 size={20} 
-                color="#6B7280" 
+                color={COLORS.textSecondary} 
               />
             </TouchableOpacity>
           </View>
@@ -137,15 +134,15 @@ export default function Index() {
 
         <View style={styles.features}>
           <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
             <Text style={styles.featureText}>Captura de tickets</Text>
           </View>
           <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
             <Text style={styles.featureText}>Aprobación de viajes</Text>
           </View>
           <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
             <Text style={styles.featureText}>Exportación a Excel</Text>
           </View>
         </View>
@@ -165,7 +162,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   content: {
     flex: 1,
@@ -175,20 +172,20 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 24,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: COLORS.primaryBackground,
     padding: 24,
     borderRadius: 100,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
@@ -201,9 +198,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: COLORS.border,
     borderRadius: 12,
     marginBottom: 16,
     paddingHorizontal: 16,
@@ -215,27 +212,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#111827',
+    color: COLORS.text,
   },
   eyeIcon: {
     padding: 4,
   },
   loginButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     marginTop: 8,
   },
   loginButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: COLORS.textMuted,
   },
   loginButtonText: {
     color: '#FFFFFF',
@@ -253,19 +245,19 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 14,
-    color: '#374151',
+    color: COLORS.text,
     marginLeft: 8,
   },
   footer: {
     marginTop: 16,
     fontSize: 14,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
     textAlign: 'center',
   },
   demoText: {
     marginTop: 8,
     fontSize: 12,
-    color: '#4F46E5',
+    color: COLORS.primary,
     textAlign: 'center',
     fontWeight: '600',
   },
