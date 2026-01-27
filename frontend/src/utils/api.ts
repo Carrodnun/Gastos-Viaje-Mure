@@ -12,9 +12,9 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const sessionToken = useAuthStore.getState().sessionToken;
-    if (sessionToken) {
-      config.headers.Authorization = `Bearer ${sessionToken}`;
+    const accessToken = useAuthStore.getState().accessToken;
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
