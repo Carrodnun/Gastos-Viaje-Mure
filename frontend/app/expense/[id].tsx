@@ -124,7 +124,7 @@ export default function ExpenseDetailScreen() {
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Fecha</Text>
               <Text style={styles.infoValue}>
-                {format(new Date(expense.date), 'dd MMMM yyyy', { locale: es })}
+                {new Date(expense.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
               </Text>
             </View>
           </View>
