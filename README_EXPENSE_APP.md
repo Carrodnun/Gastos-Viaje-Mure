@@ -5,7 +5,7 @@ Aplicación móvil completa para gestionar y controlar los gastos de viaje de lo
 ## ✨ Características Principales
 
 ### Para Todos los Usuarios
-- 🔐 **Autenticación segura** con Microsoft OAuth
+- 🔐 **Autenticación segura** con Google OAuth
 - ✈️ **Gestión de viajes** con múltiples participantes
 - 💳 **Registro de gastos** con captura de tickets vía cámara
 - 📊 **Dashboard** con estadísticas de viajes
