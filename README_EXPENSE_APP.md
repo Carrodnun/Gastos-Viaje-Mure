@@ -58,7 +58,7 @@ Aplicación móvil completa para gestionar y controlar los gastos de viaje de lo
 
 ## 👤 Usuarios de Prueba
 
-Ya se han creado 3 usuarios de prueba. Para iniciar sesión usa Microsoft OAuth con estos emails:
+Ya se han creado 3 usuarios de prueba. Para iniciar sesión usa Google OAuth con estos emails:
 
 | Email | Rol | Permisos |
 |-------|-----|----------|
