@@ -361,23 +361,50 @@ async def list_users(current_user: User = Depends(get_current_user)):
     users = await db.users.find({}, {"_id": 0}).to_list(1000)
     return {"users": users}
 
+class UpdateUserRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+
 @app.put("/api/admin/users/{user_id}")
-async def update_user_role(
+async def update_user(
     user_id: str,
-    data: UpdateUserRoleRequest,
+    data: UpdateUserRequest,
     current_user: User = Depends(get_current_user)
 ):
     await require_role(current_user, ["admin"])
     
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
     result = await db.users.update_one(
         {"user_id": user_id},
-        {"$set": {"role": data.role}}
+        {"$set": update_data}
     )
     
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return {"message": "User role updated"}
+    return {"message": "User updated"}
+
+@app.delete("/api/admin/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    await require_role(current_user, ["admin"])
+    
+    # Prevent self-deletion
+    if user_id == current_user.user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    
+    result = await db.users.delete_one({"user_id": user_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": "User deleted"}
 
 # Admin Endpoints - Cost Centers
 @app.post("/api/admin/cost-centers")
