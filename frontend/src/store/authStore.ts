@@ -1,19 +1,18 @@
 import { create } from 'zustand';
 import { User } from '../types';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { Platform } from 'react-native';
 import axios from 'axios';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_PUBLIC_BACKEND_URL;
 
 interface AuthState {
   user: User | null;
-  sessionToken: string | null;
+  accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -21,51 +20,58 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  sessionToken: null,
+  accessToken: null,
   isLoading: true,
   isAuthenticated: false,
 
   setUser: (user) => set({ user, isAuthenticated: !!user }),
 
-  login: async () => {
+  login: async (email: string, password: string) => {
     try {
-      const redirectUrl = Platform.OS === 'web'
-        ? `${BACKEND_URL}/`
-        : Linking.createURL('/');
+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, {
+        email,
+        password
+      });
 
-      const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-
-      if (Platform.OS === 'web') {
-        window.location.href = authUrl;
-        return;
-      }
-
-      // Mobile flow
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      const { user, access_token } = response.data;
       
-      if (result.type === 'success' && result.url) {
-        const url = result.url;
-        const sessionId = url.includes('#session_id=')
-          ? url.split('#session_id=')[1]?.split('&')[0]
-          : url.split('?session_id=')[1]?.split('&')[0];
+      // Save token to AsyncStorage
+      await AsyncStorage.setItem('access_token', access_token);
+      
+      set({
+        user,
+        accessToken: access_token,
+        isAuthenticated: true,
+        isLoading: false
+      });
+    } catch (error: any) {
+      console.error('Login error:', error.response?.data || error);
+      throw new Error(error.response?.data?.detail || 'Login failed');
+    }
+  },
 
-        if (sessionId) {
-          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
-            session_id: sessionId
-          });
+  register: async (email: string, password: string, name: string) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
+        email,
+        password,
+        name
+      });
 
-          const { user, session_token } = response.data;
-          set({
-            user,
-            sessionToken: session_token,
-            isAuthenticated: true,
-            isLoading: false
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      set({ isLoading: false });
+      const { user, access_token } = response.data;
+      
+      // Save token to AsyncStorage
+      await AsyncStorage.setItem('access_token', access_token);
+      
+      set({
+        user,
+        accessToken: access_token,
+        isAuthenticated: true,
+        isLoading: false
+      });
+    } catch (error: any) {
+      console.error('Register error:', error.response?.data || error);
+      throw new Error(error.response?.data?.detail || 'Registration failed');
     }
   },
 
@@ -73,70 +79,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true });
       
-      // Check for session_id in URL (web)
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const hash = window.location.hash;
-        const query = window.location.search;
-        
-        const sessionId = hash.includes('session_id=')
-          ? hash.split('session_id=')[1]?.split('&')[0]
-          : query.includes('session_id=')
-          ? query.split('session_id=')[1]?.split('&')[0]
-          : null;
-
-        if (sessionId) {
-          const response = await axios.post(`${BACKEND_URL}/api/auth/session`, {
-            session_id: sessionId
-          }, { withCredentials: true });
-
-          const { user, session_token } = response.data;
-          set({
-            user,
-            sessionToken: session_token,
-            isAuthenticated: true,
-            isLoading: false
-          });
-          
-          // Clean URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          return;
-        }
+      // Get token from AsyncStorage
+      const token = await AsyncStorage.getItem('access_token');
+      
+      if (!token) {
+        set({ isLoading: false, isAuthenticated: false });
+        return;
       }
 
-      // Try to get current user with existing session
-      const state = get();
-      if (state.sessionToken || Platform.OS === 'web') {
-        const config = state.sessionToken
-          ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
-          : { withCredentials: true };
-        
-        const response = await axios.get(`${BACKEND_URL}/api/auth/me`, config);
-        set({
-          user: response.data,
-          isAuthenticated: true,
-          isLoading: false
-        });
-      } else {
-        set({ isLoading: false });
-      }
+      // Try to get current user with token
+      const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      set({
+        user: response.data,
+        accessToken: token,
+        isAuthenticated: true,
+        isLoading: false
+      });
     } catch (error) {
       console.log('Not authenticated');
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      await AsyncStorage.removeItem('access_token');
+      set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
     }
   },
 
   logout: async () => {
     try {
       const state = get();
-      const config = state.sessionToken
-        ? { headers: { Authorization: `Bearer ${state.sessionToken}` } }
-        : { withCredentials: true };
-      
-      await axios.post(`${BACKEND_URL}/api/auth/logout`, {}, config);
+      if (state.accessToken) {
+        await axios.post(
+          `${BACKEND_URL}/api/auth/logout`,
+          {},
+          { headers: { Authorization: `Bearer ${state.accessToken}` } }
+        );
+      }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      set({ user: null, sessionToken: null, isAuthenticated: false });
+      await AsyncStorage.removeItem('access_token');
+      set({ user: null, accessToken: null, isAuthenticated: false });
     }
   }
 }));
