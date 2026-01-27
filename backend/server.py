@@ -225,66 +225,90 @@ async def create_audit_log(
     await db.audit_logs.insert_one(log)
 
 # Auth Endpoints
-@app.post("/api/auth/session")
-async def exchange_session(request: Request, response: Response):
+@app.post("/api/auth/register")
+async def register(data: RegisterRequest):
+    """Register a new user (public endpoint)"""
     try:
-        body = await request.json()
-        session_id = body.get("session_id")
+        # Check if user already exists
+        existing = await db.users.find_one({"email": data.email}, {"_id": 0})
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
         
-        if not session_id:
-            raise HTTPException(status_code=400, detail="session_id required")
+        # Create user
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        password_hash = get_password_hash(data.password)
         
-        # Call Emergent Auth API
-        async with httpx.AsyncClient() as client:
-            auth_response = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": session_id},
-                timeout=10.0
-            )
-            
-            if auth_response.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session_id")
-            
-            user_data = auth_response.json()
-        
-        # Check if user exists
-        user_doc = await db.users.find_one(
-            {"email": user_data["email"]},
-            {"_id": 0}
-        )
-        
-        if not user_doc:
-            raise HTTPException(
-                status_code=403,
-                detail="User not found. Please contact administrator."
-            )
-        
-        # Store session
-        session_token = user_data["session_token"]
-        await db.user_sessions.insert_one({
-            "user_id": user_doc["user_id"],
-            "session_token": session_token,
-            "expires_at": datetime.now(timezone.utc) + timedelta(days=7),
+        user = {
+            "user_id": user_id,
+            "email": data.email,
+            "name": data.name,
+            "password_hash": password_hash,
+            "picture": None,
+            "role": "user",
             "created_at": datetime.now(timezone.utc)
-        })
+        }
         
-        # Set cookie
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=True,
-            samesite="none",
-            max_age=7 * 24 * 60 * 60,
-            path="/"
-        )
+        await db.users.insert_one(user)
         
-        return {"user": user_doc, "session_token": session_token}
+        # Create JWT token
+        access_token = create_access_token({"user_id": user_id})
         
+        # Remove password_hash from response
+        user.pop("password_hash")
+        user.pop("_id", None)
+        
+        return {
+            "user": user,
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Session exchange error: {e}")
+        print(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auth/login")
+async def login(data: LoginRequest, response: Response):
+    """Login with email and password"""
+    try:
+        # Find user
+        user_doc = await db.users.find_one({"email": data.email}, {"_id": 0})
+        
+        if not user_doc:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Verify password
+        password_hash = user_doc.get("password_hash")
+        if not password_hash or not verify_password(data.password, password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Create JWT token
+        access_token = create_access_token({"user_id": user_doc["user_id"]})
+        
+        # Set cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+            path="/"
+        )
+        
+        # Remove password_hash from response
+        user_doc.pop("password_hash", None)
+        
+        return {
+            "user": user_doc,
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Login error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/auth/me")
@@ -292,11 +316,8 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @app.post("/api/auth/logout")
-async def logout(request: Request, response: Response):
-    session_token = request.cookies.get("session_token")
-    if session_token:
-        await db.user_sessions.delete_one({"session_token": session_token})
-        response.delete_cookie("session_token", path="/")
+async def logout(response: Response):
+    response.delete_cookie("access_token", path="/")
     return {"message": "Logged out"}
 
 # Admin Endpoints - User Management
