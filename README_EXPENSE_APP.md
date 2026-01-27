@@ -201,7 +201,7 @@ Todas las acciones importantes quedan registradas:
 6. **OCR** para extraer datos automáticamente de tickets
 
 ### Testing
-- Probar autenticación con cuentas Microsoft reales
+- Probar autenticación con cuentas Google reales
 - Verificar flujo completo usuario → autorizador → admin
 - Testear captura de cámara en dispositivos físicos
 - Validar exportación Excel con datos reales
