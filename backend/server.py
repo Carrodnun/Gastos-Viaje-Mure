@@ -533,6 +533,28 @@ async def update_expense_category(
     
     return {"message": "Category updated"}
 
+@app.delete("/api/admin/expense-categories/{category_id}")
+async def delete_expense_category(
+    category_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    await require_role(current_user, ["admin"])
+    
+    # Check if any expenses use this category
+    expense_count = await db.expenses.count_documents({"category_id": category_id})
+    if expense_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete: {expense_count} expense(s) use this category"
+        )
+    
+    result = await db.expense_categories.delete_one({"category_id": category_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    return {"message": "Category deleted"}
+
 # Trip Endpoints
 @app.post("/api/trips")
 async def create_trip(
