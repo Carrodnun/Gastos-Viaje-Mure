@@ -98,6 +98,15 @@ class AuditLog(BaseModel):
     timestamp: datetime
 
 # Request/Response Models
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
 class CreateUserRequest(BaseModel):
     email: str
     name: str
