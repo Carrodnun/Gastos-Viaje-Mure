@@ -8,30 +8,14 @@ export default function RootLayout() {
       <Stack 
         screenOptions={{ 
           headerShown: false,
-          contentStyle: { backgroundColor: '#F9FAFB' },
-          animation: 'slide_from_right'
+          contentStyle: { backgroundColor: '#F9FAFB' }
         }}
       >
-        <Stack.Screen 
-          name="index" 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="(tabs)" 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="trip/[id]" 
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="expense/create" 
-          options={{ headerShown: false, presentation: 'modal' }}
-        />
-        <Stack.Screen 
-          name="expense/[id]" 
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="trip/[id]" />
+        <Stack.Screen name="expense/create" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="expense/[id]" />
       </Stack>
     </GestureHandlerRootView>
   );
