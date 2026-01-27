@@ -185,10 +185,10 @@ export default function ExpenseDetailScreen() {
 
         <View style={styles.metadataCard}>
           <Text style={styles.metadataText}>
-            Creado: {format(new Date(expense.created_at), 'dd MMM yyyy HH:mm', { locale: es })}
+            Creado: {new Date(expense.created_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </Text>
           <Text style={styles.metadataText}>
-            Última modificación: {format(new Date(expense.modified_at), 'dd MMM yyyy HH:mm', { locale: es })}
+            Última modificación: {new Date(expense.modified_at).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
       </ScrollView>
