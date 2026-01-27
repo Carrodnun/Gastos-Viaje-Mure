@@ -196,7 +196,7 @@ export default function TripDetailScreen() {
                 </View>
                 <View style={styles.expenseDate}>
                   <Text style={styles.expenseDateText}>
-                    {format(new Date(expense.date), 'dd MMM', { locale: es })}
+                    {new Date(expense.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                   </Text>
                 </View>
               </View>
