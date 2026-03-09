@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Modal, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  Platform, 
+  Modal, 
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../src/constants/colors';
+import { COLORS, SHADOWS, DESIGN } from '../../src/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, tension: 50, friction: 8, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -26,98 +47,98 @@ export default function ProfileScreen() {
 
   const getRoleText = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'Administrador';
-      case 'approver':
-        return 'Autorizador';
-      case 'user':
-        return 'Usuario';
-      default:
-        return role;
+      case 'admin': return 'Administrador';
+      case 'approver': return 'Autorizador';
+      case 'user': return 'Usuario';
+      default: return role;
     }
   };
 
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
+    <View style={styles.infoItem}>
+      <View style={styles.infoIcon}>
+        <Ionicons name={icon as any} size={20} color={COLORS.primary} />
+      </View>
+      <View style={styles.infoContent}>
+        <Text style={styles.infoLabel}>{label}</Text>
+        <Text style={styles.infoValue}>{value}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>{getInitials(user?.name || 'U')}</Text>
-          </View>
-        </View>
-        <Text style={styles.name}>{user?.name}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{getRoleText(user?.role || '')}</Text>
-        </View>
-      </View>
-
-      <View style={styles.infoSection}>
-        <Text style={styles.sectionTitle}>Información de la Cuenta</Text>
-        
-        <View style={styles.infoItem}>
-          <View style={styles.infoIcon}>
-            <Ionicons name="person-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Nombre</Text>
-            <Text style={styles.infoValue}>{user?.name}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoItem}>
-          <View style={styles.infoIcon}>
-            <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Correo electrónico</Text>
-            <Text style={styles.infoValue}>{user?.email}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoItem}>
-          <View style={styles.infoIcon}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Rol</Text>
-            <Text style={styles.infoValue}>{getRoleText(user?.role || '')}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.menu}>
-        <TouchableOpacity 
-          style={styles.logoutButton} 
-          onPress={() => setShowLogoutModal(true)}
+    <LinearGradient
+      colors={['#E8F5EC', '#E8F0F8', '#F0EBF5']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Header con gradiente */}
+        <LinearGradient
+          colors={['#114D27', '#0D3D1F']}
+          style={styles.header}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
-          <Ionicons name="log-out-outline" size={24} color={COLORS.error} />
-          <Text style={styles.logoutText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
-      </View>
+          <Animated.View style={[styles.avatarContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+            <View style={styles.avatarOuter}>
+              <View style={styles.avatarInner}>
+                <Text style={styles.avatarText}>{getInitials(user?.name || 'U')}</Text>
+              </View>
+            </View>
+          </Animated.View>
+          <Text style={styles.name}>{user?.name}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
+          <View style={styles.rolePill}>
+            <Ionicons name="shield-checkmark" size={14} color={COLORS.headerDark} />
+            <Text style={styles.roleText}>{getRoleText(user?.role || '')}</Text>
+          </View>
+        </LinearGradient>
 
-      <Text style={styles.version}>Versión 1.0.0</Text>
+        <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+          {/* Info Card */}
+          <View style={styles.infoCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>INFORMACIÓN DE LA CUENTA</Text>
+              <View style={styles.sectionLine} />
+            </View>
+            
+            <InfoRow icon="person-outline" label="Nombre" value={user?.name || ''} />
+            <InfoRow icon="mail-outline" label="Correo electrónico" value={user?.email || ''} />
+            <InfoRow icon="shield-checkmark-outline" label="Rol" value={getRoleText(user?.role || '')} />
+          </View>
 
-      {/* Modal de confirmación para cerrar sesión */}
+          {/* Logout Button */}
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={() => setShowLogoutModal(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.logoutIconContainer}>
+              <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
+            </View>
+            <Text style={styles.logoutText}>Cerrar Sesión</Text>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          <Text style={styles.version}>Versión 1.0.0</Text>
+        </Animated.View>
+      </ScrollView>
+
+      {/* Logout Modal */}
       <Modal visible={showLogoutModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalIcon}>
-              <Ionicons name="log-out" size={48} color={COLORS.error} />
+          <Animated.View style={[styles.modalContent, { transform: [{ scale: showLogoutModal ? 1 : 0.9 }] }]}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="log-out" size={32} color={COLORS.error} />
             </View>
             <Text style={styles.modalTitle}>Cerrar Sesión</Text>
-            <Text style={styles.modalText}>
-              ¿Estás seguro que deseas cerrar sesión?
-            </Text>
+            <Text style={styles.modalText}>¿Estás seguro que deseas cerrar sesión?</Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalCancelButton]}
@@ -138,28 +159,41 @@ export default function ProfileScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
-    </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
-    backgroundColor: COLORS.headerDark,
-    paddingVertical: 32,
+    paddingTop: 24,
+    paddingBottom: 40,
     paddingHorizontal: 24,
     alignItems: 'center',
+    borderBottomLeftRadius: DESIGN.borderRadius.xl,
+    borderBottomRightRadius: DESIGN.borderRadius.xl,
+    ...SHADOWS.colored('#114D27'),
   },
   avatarContainer: {
     marginBottom: 16,
   },
-  avatarPlaceholder: {
+  avatarOuter: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInner: {
     width: 96,
     height: 96,
     borderRadius: 48,
@@ -171,58 +205,80 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: COLORS.textOnDark,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.03 * 36,
   },
   name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.textOnDark,
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
     marginBottom: 4,
+    letterSpacing: -0.03 * 26,
   },
   email: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textOnDarkMuted,
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  roleBadge: {
+  rolePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: DESIGN.borderRadius.pill,
+    gap: 6,
   },
   roleText: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.headerDark,
   },
-  infoSection: {
-    backgroundColor: COLORS.card,
-    margin: 16,
-    borderRadius: 16,
+  contentContainer: {
+    marginTop: -20,
+    paddingHorizontal: 16,
+  },
+  infoCard: {
+    backgroundColor: COLORS.glassBackground,
+    borderRadius: DESIGN.borderRadius.xl,
     padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    ...SHADOWS.medium,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 16,
+    color: COLORS.textMuted,
+    letterSpacing: 0.1 * 11,
+    marginRight: 12,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.separator,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: COLORS.separator,
   },
   infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: COLORS.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   infoContent: {
     flex: 1,
@@ -231,37 +287,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginBottom: 2,
+    letterSpacing: 0.02 * 12,
   },
   infoValue: {
     fontSize: 16,
     color: COLORS.text,
     fontWeight: '500',
-  },
-  menu: {
-    marginHorizontal: 16,
-    marginTop: 8,
+    letterSpacing: -0.01 * 16,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.errorLight,
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: COLORS.glassBackground,
+    padding: 16,
+    borderRadius: DESIGN.borderRadius.large,
+    marginTop: 20,
     borderWidth: 1,
-    borderColor: COLORS.error,
+    borderColor: COLORS.errorLight,
+    ...SHADOWS.small,
+  },
+  logoutIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.errorLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
   logoutText: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.error,
-    marginLeft: 8,
   },
   version: {
     textAlign: 'center',
     marginTop: 32,
     marginBottom: 32,
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textMuted,
   },
   modalOverlay: {
@@ -273,26 +337,35 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: DESIGN.borderRadius.xl,
+    padding: 28,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 340,
     alignItems: 'center',
+    ...SHADOWS.large,
   },
-  modalIcon: {
-    marginBottom: 16,
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.errorLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 8,
+    letterSpacing: -0.03 * 20,
   },
   modalText: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
+    lineHeight: 22,
   },
   modalActions: {
     flexDirection: 'row',
@@ -301,8 +374,8 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: DESIGN.borderRadius.medium,
     alignItems: 'center',
   },
   modalCancelButton: {
