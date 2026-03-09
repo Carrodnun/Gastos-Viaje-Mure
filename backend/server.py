@@ -745,6 +745,39 @@ async def reject_trip(
     
     return {"message": "Trip rejected"}
 
+@app.delete("/api/trips/{trip_id}")
+async def delete_trip(
+    trip_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    trip = await db.trips.find_one({"trip_id": trip_id}, {"_id": 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Only creator or admin can delete
+    if trip["creator_id"] != current_user.user_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only creator or admin can delete trips")
+    
+    # Delete all expenses associated with this trip
+    await db.expenses.delete_many({"trip_id": trip_id})
+    
+    # Delete the trip
+    result = await db.trips.delete_one({"trip_id": trip_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Log the deletion
+    await create_audit_log(
+        "trip",
+        trip_id,
+        "deleted",
+        current_user.user_id,
+        {"trip_name": trip["name"]}
+    )
+    
+    return {"message": "Trip and associated expenses deleted"}
+
 # Expense Endpoints
 @app.post("/api/expenses")
 async def create_expense(
