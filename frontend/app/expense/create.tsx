@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.headerDark,
     paddingTop: 48,
     paddingBottom: 16,
     paddingHorizontal: 16,
