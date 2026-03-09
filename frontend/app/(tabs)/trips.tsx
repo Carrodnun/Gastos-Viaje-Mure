@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   RefreshControl,
   TextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { Trip } from '../../src/types';
@@ -27,7 +27,6 @@ export default function TripsScreen() {
       setLoading(true);
       const response = await api.get('/api/trips');
       setTrips(response.data.trips || []);
-      setFilteredTrips(response.data.trips || []);
     } catch (error) {
       console.error('Error loading trips:', error);
     } finally {
@@ -35,9 +34,12 @@ export default function TripsScreen() {
     }
   };
 
-  useEffect(() => {
-    loadTrips();
-  }, []);
+  // Recargar viajes cuando la pantalla recibe el foco
+  useFocusEffect(
+    useCallback(() => {
+      loadTrips();
+    }, [])
+  );
 
   useEffect(() => {
     let filtered = trips;

@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +28,8 @@ export default function TripDetailScreen() {
   const [costCenters, setCostCenters] = useState<Record<string, CostCenter>>({});
   const [loading, setLoading] = useState(true);
   const [showParticipants, setShowParticipants] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -90,6 +94,38 @@ export default function TripDetailScreen() {
     router.push(`/expense/create?tripId=${id}`);
   };
 
+  const handleDeleteTrip = async () => {
+    try {
+      setDeleteLoading(true);
+      await api.delete(`/api/trips/${id}`);
+      setShowDeleteModal(false);
+      
+      const msg = 'Viaje eliminado correctamente';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Éxito', msg);
+      }
+      
+      router.back();
+    } catch (error: any) {
+      console.error('Error deleting trip:', error);
+      const errorMsg = error.response?.data?.detail || 'Error al eliminar el viaje';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const canDeleteTrip = () => {
+    if (!trip || !currentUser) return false;
+    return trip.creator_id === currentUser.user_id || currentUser.role === 'admin';
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -137,12 +173,22 @@ export default function TripDetailScreen() {
         }
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            {canDeleteTrip() && (
+              <TouchableOpacity
+                style={styles.deleteHeaderButton}
+                onPress={() => setShowDeleteModal(true)}
+              >
+                <Ionicons name="trash-outline" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.headerContent}>
             <Text style={styles.tripName}>{trip.name}</Text>
             <View
@@ -311,6 +357,18 @@ export default function TripDetailScreen() {
             </View>
           )}
         </View>
+
+        {/* Botón para eliminar viaje al final */}
+        {canDeleteTrip() && (
+          <TouchableOpacity 
+            style={styles.deleteButton} 
+            onPress={() => setShowDeleteModal(true)}
+          >
+            <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+            <Text style={styles.deleteButtonText}>Eliminar Viaje</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -319,6 +377,44 @@ export default function TripDetailScreen() {
           <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
       )}
+
+      {/* Modal de confirmación para eliminar */}
+      <Modal visible={showDeleteModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="warning" size={48} color={COLORS.error} />
+            </View>
+            <Text style={styles.modalTitle}>Eliminar Viaje</Text>
+            <Text style={styles.modalText}>
+              ¿Estás seguro que deseas eliminar "{trip.name}"?
+            </Text>
+            <Text style={styles.modalWarning}>
+              Se eliminarán también todos los gastos asociados. Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={deleteLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalDeleteButton]}
+                onPress={handleDeleteTrip}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>Eliminar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -342,8 +438,16 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     paddingHorizontal: 16,
   },
-  backButton: {
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  backButton: {
+  },
+  deleteHeaderButton: {
+    padding: 4,
   },
   headerContent: {
     flexDirection: 'row',
@@ -550,6 +654,23 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: 12,
+  },
+  deleteButtonText: {
+    color: COLORS.error,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   fab: {
     position: 'absolute',
     right: 24,
@@ -560,5 +681,70 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 16,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalWarning: {
+    fontSize: 14,
+    color: COLORS.error,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalDeleteButton: {
+    backgroundColor: COLORS.error,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  modalDeleteText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
