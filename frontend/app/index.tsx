@@ -1,13 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  TextInput, 
+  Alert, 
+  KeyboardAvoidingView, 
+  Platform, 
+  Image,
+  Animated,
+  Dimensions,
+} from 'react-native';
 import { useRouter, usePathname, useNavigationContainerRef } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import LoadingScreen from '../src/components/LoadingScreen';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../src/constants/colors';
+import { COLORS, SHADOWS, DESIGN } from '../src/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Logo URL
 const LOGO_URL = 'https://customer-assets.emergentagent.com/job_99826fab-0c79-47aa-8b4f-531fdc36c7f6/artifacts/6x1i2ave_logo%20v256.jpg';
+
+const { width } = Dimensions.get('window');
 
 export default function Index() {
   const router = useRouter();
@@ -19,6 +34,27 @@ export default function Index() {
   const [showPassword, setShowPassword] = useState(false);
   const [loggingIn, setLoggingIn] = useState(false);
   const [navReady, setNavReady] = useState(false);
+  
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    // Entrada animada
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   useEffect(() => {
     const checkNavReady = setInterval(() => {
@@ -72,105 +108,153 @@ export default function Index() {
   }
 
   return (
-    <KeyboardAvoidingView
+    <LinearGradient
+      colors={['#E8F5EC', '#E8F0F8', '#F0EBF5']}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <View style={styles.content}>
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={{ uri: LOGO_URL }}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        
-        <Text style={styles.title}>Control de Gastos de Viaje</Text>
-        <Text style={styles.subtitle}>
-          Gestiona los gastos de viaje de tu empresa
-        </Text>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor={COLORS.textMuted}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          {/* Header Pill iOS Style */}
+          <View style={styles.headerPill}>
+            <Image
+              source={{ uri: LOGO_URL }}
+              style={styles.pillLogo}
+              resizeMode="cover"
             />
+            <Text style={styles.pillText}>Control Gastos</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor={COLORS.textMuted}
+          {/* Logo Principal */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={{ uri: LOGO_URL }}
+              style={styles.logo}
+              resizeMode="contain"
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <Ionicons 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color={COLORS.textSecondary} 
+          </View>
+          
+          <Text style={styles.title}>Control de Gastos de Viaje</Text>
+          <Text style={styles.subtitle}>
+            Gestiona los gastos de viaje de tu empresa
+          </Text>
+
+          {/* Card Glassmorphism */}
+          <View style={styles.glassCard}>
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIconContainer}>
+                <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholderTextColor={COLORS.textMuted}
               />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIconContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color={COLORS.primary} />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholderTextColor={COLORS.textMuted}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Ionicons 
+                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color={COLORS.textMuted} 
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.loginButton, loggingIn && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={loggingIn}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#1B7A3E', '#22A050']}
+                style={styles.loginButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {loggingIn ? (
+                  <Text style={styles.loginButtonText}>Iniciando...</Text>
+                ) : (
+                  <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={[styles.loginButton, loggingIn && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={loggingIn}
-          >
-            {loggingIn ? (
-              <Text style={styles.loginButtonText}>Iniciando...</Text>
-            ) : (
-              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.features}>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-            <Text style={styles.featureText}>Captura de tickets</Text>
+          {/* Features */}
+          <View style={styles.features}>
+            <View style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: COLORS.successLight }]}>
+                <Ionicons name="camera" size={16} color={COLORS.success} />
+              </View>
+              <Text style={styles.featureText}>Captura de tickets</Text>
+            </View>
+            <View style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: COLORS.infoLight }]}>
+                <Ionicons name="checkmark-circle" size={16} color={COLORS.info} />
+              </View>
+              <Text style={styles.featureText}>Aprobación de viajes</Text>
+            </View>
+            <View style={styles.feature}>
+              <View style={[styles.featureIcon, { backgroundColor: COLORS.warningLight }]}>
+                <Ionicons name="document-text" size={16} color={COLORS.warning} />
+              </View>
+              <Text style={styles.featureText}>Exportación a Excel</Text>
+            </View>
           </View>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-            <Text style={styles.featureText}>Aprobación de viajes</Text>
-          </View>
-          <View style={styles.feature}>
-            <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-            <Text style={styles.featureText}>Exportación a Excel</Text>
-          </View>
-        </View>
 
-        <Text style={styles.footer}>
-          Si no tienes cuenta, contacta con tu administrador
-        </Text>
+          <Text style={styles.footer}>
+            Si no tienes cuenta, contacta con tu administrador
+          </Text>
 
-        <Text style={styles.demoText}>
-          Demo: admin@empresa.com / Admin123!
-        </Text>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.demoContainer}>
+            <Text style={styles.demoLabel}>Demo</Text>
+            <Text style={styles.demoText}>admin@empresa.com / Admin123!</Text>
+          </View>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -178,72 +262,109 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
-  logoContainer: {
-    marginBottom: 24,
+  headerPill: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: COLORS.glassWhite,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingRight: 20,
+    borderRadius: DESIGN.borderRadius.pill,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    ...SHADOWS.small,
+  },
+  pillLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  pillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: -0.01 * 14,
+  },
+  logoContainer: {
+    marginBottom: 20,
+    ...SHADOWS.medium,
   },
   logo: {
-    width: 180,
-    height: 180,
-    borderRadius: 20,
+    width: 140,
+    height: 140,
+    borderRadius: DESIGN.borderRadius.large,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: -0.03 * 26,
   },
   subtitle: {
     fontSize: 16,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
+    marginBottom: 28,
+    lineHeight: 22,
   },
-  form: {
+  glassCard: {
     width: '100%',
     maxWidth: 400,
+    backgroundColor: COLORS.glassBackground,
+    borderRadius: DESIGN.borderRadius.xl,
+    padding: 24,
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    ...SHADOWS.medium,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.background,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
+    borderColor: COLORS.borderLight,
+    borderRadius: DESIGN.borderRadius.medium,
     marginBottom: 16,
-    paddingHorizontal: 16,
   },
-  inputIcon: {
-    marginRight: 12,
+  inputIconContainer: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    paddingRight: 16,
     fontSize: 16,
     color: COLORS.text,
   },
   eyeIcon: {
-    padding: 4,
+    padding: 14,
   },
   loginButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
+    borderRadius: DESIGN.borderRadius.medium,
+    overflow: 'hidden',
     marginTop: 8,
+    ...SHADOWS.colored('#1B7A3E'),
   },
   loginButtonDisabled: {
-    backgroundColor: COLORS.textMuted,
+    opacity: 0.7,
+  },
+  loginButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   loginButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
+    letterSpacing: -0.01 * 17,
   },
   features: {
     width: '100%',
@@ -254,22 +375,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  featureIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   featureText: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginLeft: 8,
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   footer: {
-    marginTop: 16,
     fontSize: 14,
     color: COLORS.textMuted,
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  demoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardBackground,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: DESIGN.borderRadius.medium,
+  },
+  demoLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+    backgroundColor: COLORS.glassWhite,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 10,
+    overflow: 'hidden',
+    letterSpacing: 0.05 * 12,
+    textTransform: 'uppercase',
   },
   demoText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: COLORS.primary,
-    textAlign: 'center',
-    fontWeight: '600',
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontFamily: Platform.OS === 'ios' ? 'SF Mono' : 'monospace',
   },
 });
