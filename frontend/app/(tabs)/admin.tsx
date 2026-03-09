@@ -242,7 +242,7 @@ export default function AdminScreen() {
   const getRoleText = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'Administrador';
+        return 'Admin';
       case 'approver':
         return 'Autorizador';
       case 'user':
@@ -252,6 +252,15 @@ export default function AdminScreen() {
     }
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.tabs}>
@@ -259,6 +268,11 @@ export default function AdminScreen() {
           style={[styles.tab, activeTab === 'users' && styles.tabActive]}
           onPress={() => setActiveTab('users')}
         >
+          <Ionicons 
+            name="people" 
+            size={18} 
+            color={activeTab === 'users' ? COLORS.primary : COLORS.textMuted} 
+          />
           <Text style={[styles.tabText, activeTab === 'users' && styles.tabTextActive]}>
             Usuarios
           </Text>
@@ -267,6 +281,11 @@ export default function AdminScreen() {
           style={[styles.tab, activeTab === 'centers' && styles.tabActive]}
           onPress={() => setActiveTab('centers')}
         >
+          <Ionicons 
+            name="business" 
+            size={18} 
+            color={activeTab === 'centers' ? COLORS.primary : COLORS.textMuted} 
+          />
           <Text style={[styles.tabText, activeTab === 'centers' && styles.tabTextActive]}>
             Centros
           </Text>
@@ -275,6 +294,11 @@ export default function AdminScreen() {
           style={[styles.tab, activeTab === 'categories' && styles.tabActive]}
           onPress={() => setActiveTab('categories')}
         >
+          <Ionicons 
+            name="pricetags" 
+            size={18} 
+            color={activeTab === 'categories' ? COLORS.primary : COLORS.textMuted} 
+          />
           <Text style={[styles.tabText, activeTab === 'categories' && styles.tabTextActive]}>
             Categorías
           </Text>
@@ -287,7 +311,9 @@ export default function AdminScreen() {
             {users.map((user) => (
               <View key={user.user_id} style={styles.listItem}>
                 <TouchableOpacity style={styles.listItemLeft} onPress={() => openEditModal(user)}>
-                  <Ionicons name="person-circle" size={40} color={COLORS.primary} />
+                  <View style={styles.avatarSmall}>
+                    <Text style={styles.avatarSmallText}>{getInitials(user.name)}</Text>
+                  </View>
                   <View style={styles.listItemInfo}>
                     <Text style={styles.listItemTitle}>{user.name}</Text>
                     <Text style={styles.listItemSubtitle}>{user.email}</Text>
@@ -314,7 +340,9 @@ export default function AdminScreen() {
             {costCenters.map((center) => (
               <View key={center.center_id} style={styles.listItem}>
                 <TouchableOpacity style={styles.listItemLeft} onPress={() => openEditModal(center)}>
-                  <Ionicons name="business" size={40} color={COLORS.primary} />
+                  <View style={[styles.iconCircle, { backgroundColor: COLORS.info }]}>
+                    <Ionicons name="business" size={20} color="#FFFFFF" />
+                  </View>
                   <View style={styles.listItemInfo}>
                     <Text style={styles.listItemTitle}>{center.name}</Text>
                     <Text style={styles.listItemSubtitle}>{center.code}</Text>
@@ -344,7 +372,9 @@ export default function AdminScreen() {
             {categories.map((category) => (
               <View key={category.category_id} style={styles.listItem}>
                 <TouchableOpacity style={styles.listItemLeft} onPress={() => openEditModal(category)}>
-                  <Ionicons name="pricetag" size={40} color={COLORS.primary} />
+                  <View style={[styles.iconCircle, { backgroundColor: COLORS.warning }]}>
+                    <Ionicons name="pricetag" size={20} color="#FFFFFF" />
+                  </View>
                   <View style={styles.listItemInfo}>
                     <Text style={styles.listItemTitle}>{category.name}</Text>
                   </View>
@@ -367,7 +397,7 @@ export default function AdminScreen() {
             ))}
           </View>
         )}
-        <View style={{ height: 120 }} />
+        <View style={{ height: 140 }} />
       </ScrollView>
 
       <View style={styles.footer}>
@@ -375,10 +405,11 @@ export default function AdminScreen() {
           <Ionicons name="download" size={20} color="#FFFFFF" />
           <Text style={styles.exportButtonText}>Exportar a Excel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
-          <Ionicons name="add" size={32} color="#FFFFFF" />
-        </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
+        <Ionicons name="add" size={28} color="#FFFFFF" />
+      </TouchableOpacity>
 
       {/* Modal para Crear/Editar */}
       <Modal visible={showModal} transparent animationType="slide">
@@ -597,8 +628,11 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 6,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
@@ -606,9 +640,9 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.primary,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: COLORS.textMuted,
   },
   tabTextActive: {
     color: COLORS.primary,
@@ -631,6 +665,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  avatarSmall: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primaryMedium,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarSmallText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   listItemInfo: {
     marginLeft: 12,
     flex: 1,
@@ -651,7 +705,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   roleBadge: {
-    backgroundColor: COLORS.primaryBackground,
+    backgroundColor: COLORS.cardBackground,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -670,16 +724,22 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 16,
-    gap: 12,
+    paddingBottom: 24,
+    backgroundColor: COLORS.background,
   },
   exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.success,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginRight: 80,
   },
   exportButtonText: {
     color: '#FFFFFF',
@@ -694,13 +754,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryMedium,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -722,13 +782,15 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   input: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 16,
     color: COLORS.text,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   roleSelector: {
     flexDirection: 'row',
@@ -739,11 +801,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBackground,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
   },
   roleOptionActive: {
     backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   roleOptionText: {
     fontSize: 14,
@@ -766,7 +831,7 @@ const styles = StyleSheet.create({
   },
   deleteModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -812,7 +877,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteModalCancelButton: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBackground,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
