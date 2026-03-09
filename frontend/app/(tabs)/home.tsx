@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Animated,
+  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { Trip } from '../../src/types';
-import { COLORS } from '../../src/constants/colors';
+import { COLORS, SHADOWS, DESIGN } from '../../src/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -20,6 +23,17 @@ export default function HomeScreen() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
+  
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -44,7 +58,6 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
-  // Recargar cuando la pantalla recibe el foco
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -77,159 +90,264 @@ export default function HomeScreen() {
     }
   };
 
+  const StatCard = ({ icon, count, label, color, lightColor }: any) => (
+    <View style={[styles.statCard, { borderColor: lightColor }]}>
+      <View style={[styles.statIconContainer, { backgroundColor: lightColor }]}>
+        <Ionicons name={icon} size={22} color={color} />
+      </View>
+      <Text style={styles.statNumber}>{count}</Text>
+      <Text style={[styles.statLabel, { color: color }]}>{label}</Text>
+    </View>
+  );
+
   return (
-    <ScrollView
+    <LinearGradient
+      colors={['#E8F5EC', '#E8F0F8', '#F0EBF5']}
       style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={loadData} />
-      }
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hola, {user?.name}!</Text>
-          <Text style={styles.subtitle}>Bienvenido de nuevo</Text>
-        </View>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { borderLeftColor: COLORS.pending }]}>
-          <Ionicons name="time-outline" size={24} color={COLORS.pending} />
-          <Text style={styles.statNumber}>{stats.pending}</Text>
-          <Text style={styles.statLabel}>Pendientes</Text>
-        </View>
-        <View style={[styles.statCard, { borderLeftColor: COLORS.approved }]}>
-          <Ionicons name="checkmark-circle-outline" size={24} color={COLORS.approved} />
-          <Text style={styles.statNumber}>{stats.approved}</Text>
-          <Text style={styles.statLabel}>Aprobados</Text>
-        </View>
-        <View style={[styles.statCard, { borderLeftColor: COLORS.rejected }]}>
-          <Ionicons name="close-circle-outline" size={24} color={COLORS.rejected} />
-          <Text style={styles.statNumber}>{stats.rejected}</Text>
-          <Text style={styles.statLabel}>Rechazados</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Viajes Recientes</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/trips')}>
-            <Text style={styles.seeAllText}>Ver todos</Text>
-          </TouchableOpacity>
-        </View>
-
-        {trips.slice(0, 5).map((trip) => (
-          <TouchableOpacity
-            key={trip.trip_id}
-            style={styles.tripCard}
-            onPress={() => router.push(`/trip/${trip.trip_id}`)}
-          >
-            <View style={styles.tripHeader}>
-              <Text style={styles.tripName}>{trip.name}</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusColor(trip.status) + '20' },
-                ]}
-              >
-                <Text
-                  style={[styles.statusText, { color: getStatusColor(trip.status) }]}
-                >
-                  {getStatusText(trip.status)}
-                </Text>
-              </View>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadData} tintColor={COLORS.primary} />
+        }
+      >
+        {/* Header con gradiente */}
+        <LinearGradient
+          colors={['#114D27', '#0D3D1F']}
+          style={styles.header}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.greeting}>Hola, {user?.name?.split(' ')[0]}!</Text>
+              <Text style={styles.subtitle}>Bienvenido de nuevo</Text>
             </View>
-            <View style={styles.tripInfo}>
-              <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.tripDate}>
-                {new Date(trip.created_at).toLocaleDateString('es-ES')}
+            <View style={styles.avatarSmall}>
+              <Text style={styles.avatarText}>
+                {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
               </Text>
             </View>
-            <View style={styles.tripInfo}>
-              <Ionicons name="people-outline" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.tripDate}>
-                {trip.participants.length} participante(s)
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        {trips.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="airplane-outline" size={64} color={COLORS.border} />
-            <Text style={styles.emptyText}>No tienes viajes aún</Text>
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => router.push('/(tabs)/create-trip')}
-            >
-              <Text style={styles.createButtonText}>Crear Viaje</Text>
-            </TouchableOpacity>
           </View>
-        )}
-      </View>
-    </ScrollView>
+        </LinearGradient>
+
+        <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+          {/* Stats Cards */}
+          <View style={styles.statsContainer}>
+            <StatCard 
+              icon="time-outline" 
+              count={stats.pending} 
+              label="Pendientes"
+              color={COLORS.warning}
+              lightColor={COLORS.warningLight}
+            />
+            <StatCard 
+              icon="checkmark-circle-outline" 
+              count={stats.approved} 
+              label="Aprobados"
+              color={COLORS.success}
+              lightColor={COLORS.successLight}
+            />
+            <StatCard 
+              icon="close-circle-outline" 
+              count={stats.rejected} 
+              label="Rechazados"
+              color={COLORS.error}
+              lightColor={COLORS.errorLight}
+            />
+          </View>
+
+          {/* Recent Trips Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>VIAJES RECIENTES</Text>
+              <View style={styles.sectionLine} />
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.seeAllButton}
+              onPress={() => router.push('/(tabs)/trips')}
+            >
+              <Text style={styles.seeAllText}>Ver todos</Text>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+            </TouchableOpacity>
+
+            {trips.slice(0, 5).map((trip, index) => (
+              <TouchableOpacity
+                key={trip.trip_id}
+                style={styles.tripCard}
+                onPress={() => router.push(`/trip/${trip.trip_id}`)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.tripHeader}>
+                  <View style={styles.tripIconContainer}>
+                    <Ionicons name="airplane" size={20} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.tripInfo}>
+                    <Text style={styles.tripName}>{trip.name}</Text>
+                    <View style={styles.tripMeta}>
+                      <Ionicons name="calendar-outline" size={14} color={COLORS.textMuted} />
+                      <Text style={styles.tripDate}>
+                        {new Date(trip.created_at).toLocaleDateString('es-ES')}
+                      </Text>
+                    </View>
+                  </View>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: getStatusColor(trip.status) + '15' },
+                    ]}
+                  >
+                    <View style={[styles.statusDot, { backgroundColor: getStatusColor(trip.status) }]} />
+                    <Text style={[styles.statusText, { color: getStatusColor(trip.status) }]}>
+                      {getStatusText(trip.status)}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            {trips.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconContainer}>
+                  <Ionicons name="airplane-outline" size={48} color={COLORS.textMuted} />
+                </View>
+                <Text style={styles.emptyTitle}>No tienes viajes aún</Text>
+                <Text style={styles.emptyText}>Crea tu primer viaje para empezar</Text>
+                <TouchableOpacity
+                  style={styles.createButton}
+                  onPress={() => router.push('/(tabs)/create-trip')}
+                >
+                  <LinearGradient
+                    colors={['#1B7A3E', '#22A050']}
+                    style={styles.createButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Ionicons name="add" size={20} color="#FFFFFF" />
+                    <Text style={styles.createButtonText}>Crear Viaje</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </Animated.View>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
-    backgroundColor: COLORS.headerDark,
-    padding: 24,
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: DESIGN.borderRadius.xl,
+    borderBottomRightRadius: DESIGN.borderRadius.xl,
+    ...SHADOWS.colored('#114D27'),
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: -0.03 * 28,
   },
   subtitle: {
-    fontSize: 14,
-    color: COLORS.primaryLight,
+    fontSize: 15,
+    color: COLORS.textOnDarkMuted,
     marginTop: 4,
+  },
+  avatarSmall: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primaryMedium,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primaryLight,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  contentContainer: {
+    marginTop: -16,
   },
   statsContainer: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
     gap: 12,
   },
   statCard: {
     flex: 1,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.glassBackground,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: DESIGN.borderRadius.large,
     alignItems: 'center',
-    borderLeftWidth: 4,
+    borderWidth: 1,
+    ...SHADOWS.small,
+  },
+  statIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: COLORS.text,
-    marginTop: 8,
+    letterSpacing: -0.03 * 28,
   },
   statLabel: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    fontWeight: '600',
     marginTop: 4,
+    letterSpacing: 0.02 * 12,
   },
   section: {
-    padding: 16,
+    padding: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    letterSpacing: 0.1 * 11,
+    marginRight: 12,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.separator,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginBottom: 16,
   },
   seeAllText: {
     fontSize: 14,
@@ -237,61 +355,103 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tripCard: {
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.glassBackground,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: DESIGN.borderRadius.large,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    ...SHADOWS.small,
   },
   tripHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+  },
+  tripIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.cardBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  tripInfo: {
+    flex: 1,
   },
   tripName: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
-    flex: 1,
+    letterSpacing: -0.01 * 16,
+    marginBottom: 4,
+  },
+  tripMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tripDate: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginLeft: 4,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: DESIGN.borderRadius.pill,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  tripInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  tripDate: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginLeft: 6,
-  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 48,
   },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.glassBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    ...SHADOWS.small,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.textMuted,
-    marginTop: 16,
     marginBottom: 24,
   },
   createButton: {
-    backgroundColor: COLORS.primary,
+    borderRadius: DESIGN.borderRadius.medium,
+    overflow: 'hidden',
+    ...SHADOWS.colored('#1B7A3E'),
+  },
+  createButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
   },
   createButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
 });
