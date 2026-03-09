@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/utils/api';
 import { Trip } from '../../src/types';
+import { COLORS } from '../../src/constants/colors';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -43,16 +44,23 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
+  // Recargar cuando la pantalla recibe el foco
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#F59E0B';
+        return COLORS.pending;
       case 'approved':
-        return '#10B981';
+        return COLORS.approved;
       case 'rejected':
-        return '#EF4444';
+        return COLORS.rejected;
       default:
-        return '#6B7280';
+        return COLORS.textSecondary;
     }
   };
 
@@ -84,18 +92,18 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { borderLeftColor: '#F59E0B' }]}>
-          <Ionicons name="time-outline" size={24} color="#F59E0B" />
+        <View style={[styles.statCard, { borderLeftColor: COLORS.pending }]}>
+          <Ionicons name="time-outline" size={24} color={COLORS.pending} />
           <Text style={styles.statNumber}>{stats.pending}</Text>
           <Text style={styles.statLabel}>Pendientes</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: '#10B981' }]}>
-          <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
+        <View style={[styles.statCard, { borderLeftColor: COLORS.approved }]}>
+          <Ionicons name="checkmark-circle-outline" size={24} color={COLORS.approved} />
           <Text style={styles.statNumber}>{stats.approved}</Text>
           <Text style={styles.statLabel}>Aprobados</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: '#EF4444' }]}>
-          <Ionicons name="close-circle-outline" size={24} color="#EF4444" />
+        <View style={[styles.statCard, { borderLeftColor: COLORS.rejected }]}>
+          <Ionicons name="close-circle-outline" size={24} color={COLORS.rejected} />
           <Text style={styles.statNumber}>{stats.rejected}</Text>
           <Text style={styles.statLabel}>Rechazados</Text>
         </View>
@@ -131,13 +139,13 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={styles.tripInfo}>
-              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.tripDate}>
                 {new Date(trip.created_at).toLocaleDateString('es-ES')}
               </Text>
             </View>
             <View style={styles.tripInfo}>
-              <Ionicons name="people-outline" size={16} color="#6B7280" />
+              <Ionicons name="people-outline" size={16} color={COLORS.textSecondary} />
               <Text style={styles.tripDate}>
                 {trip.participants.length} participante(s)
               </Text>
@@ -147,7 +155,7 @@ export default function HomeScreen() {
 
         {trips.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="airplane-outline" size={64} color="#D1D5DB" />
+            <Ionicons name="airplane-outline" size={64} color={COLORS.border} />
             <Text style={styles.emptyText}>No tienes viajes aún</Text>
             <TouchableOpacity
               style={styles.createButton}
@@ -165,10 +173,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.headerDark,
     padding: 24,
     paddingTop: 16,
     flexDirection: 'row',
@@ -182,7 +190,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#E0E7FF',
+    color: COLORS.primaryLight,
     marginTop: 4,
   },
   statsContainer: {
@@ -192,26 +200,21 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
     marginTop: 8,
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginTop: 4,
   },
   section: {
@@ -226,23 +229,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#111827',
+    color: COLORS.text,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#4F46E5',
+    color: COLORS.primary,
     fontWeight: '600',
   },
   tripCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.card,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   tripHeader: {
     flexDirection: 'row',
@@ -253,7 +251,7 @@ const styles = StyleSheet.create({
   tripName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: COLORS.text,
     flex: 1,
   },
   statusBadge: {
@@ -272,7 +270,7 @@ const styles = StyleSheet.create({
   },
   tripDate: {
     fontSize: 14,
-    color: '#6B7280',
+    color: COLORS.textSecondary,
     marginLeft: 6,
   },
   emptyState: {
@@ -281,12 +279,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: COLORS.textMuted,
     marginTop: 16,
     marginBottom: 24,
   },
   createButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

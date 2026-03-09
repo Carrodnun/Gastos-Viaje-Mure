@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useRouter, usePathname, useNavigationContainerRef } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import LoadingScreen from '../src/components/LoadingScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../src/constants/colors';
+
+// Logo URL
+const LOGO_URL = 'https://customer-assets.emergentagent.com/job_99826fab-0c79-47aa-8b4f-531fdc36c7f6/artifacts/6x1i2ave_logo%20v256.jpg';
 
 export default function Index() {
   const router = useRouter();
@@ -74,8 +77,13 @@ export default function Index() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="airplane" size={80} color={COLORS.primary} />
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={{ uri: LOGO_URL }}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         
         <Text style={styles.title}>Control de Gastos de Viaje</Text>
@@ -170,14 +178,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
   },
-  iconContainer: {
+  logoContainer: {
     marginBottom: 24,
-    backgroundColor: COLORS.primaryBackground,
-    padding: 24,
-    borderRadius: 100,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 180,
+    height: 180,
+    borderRadius: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.text,
     textAlign: 'center',
