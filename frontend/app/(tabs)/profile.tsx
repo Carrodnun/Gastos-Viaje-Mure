@@ -9,6 +9,7 @@ import {
   Modal, 
   ActivityIndicator,
   Animated,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -61,7 +62,7 @@ export default function ProfileScreen() {
   const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
     <View style={styles.infoItem}>
       <View style={styles.infoIcon}>
-        <Ionicons name={icon as any} size={20} color={COLORS.primary} />
+        <Ionicons name={icon as any} size={18} color={COLORS.primary} />
       </View>
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -77,65 +78,68 @@ export default function ProfileScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header con gradiente */}
-        <LinearGradient
-          colors={['#114D27', '#0D3D1F']}
-          style={styles.header}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Animated.View style={[styles.avatarContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-            <View style={styles.avatarOuter}>
-              <View style={styles.avatarInner}>
-                <Text style={styles.avatarText}>{getInitials(user?.name || 'U')}</Text>
-              </View>
-            </View>
-          </Animated.View>
-          <Text style={styles.name}>{user?.name}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
-          <View style={styles.rolePill}>
-            <Ionicons name="shield-checkmark" size={14} color={COLORS.headerDark} />
-            <Text style={styles.roleText}>{getRoleText(user?.role || '')}</Text>
-          </View>
-        </LinearGradient>
-
-        <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
-          {/* Info Card */}
-          <View style={styles.infoCard}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>INFORMACIÓN DE LA CUENTA</Text>
-              <View style={styles.sectionLine} />
-            </View>
-            
-            <InfoRow icon="person-outline" label="Nombre" value={user?.name || ''} />
-            <InfoRow icon="mail-outline" label="Correo electrónico" value={user?.email || ''} />
-            <InfoRow icon="shield-checkmark-outline" label="Rol" value={getRoleText(user?.role || '')} />
-          </View>
-
-          {/* Logout Button */}
-          <TouchableOpacity 
-            style={styles.logoutButton} 
-            onPress={() => setShowLogoutModal(true)}
-            activeOpacity={0.8}
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {/* Header */}
+          <LinearGradient
+            colors={['#114D27', '#0D3D1F']}
+            style={styles.header}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
-            <View style={styles.logoutIconContainer}>
-              <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
+            <Animated.View style={[styles.avatarContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+              <View style={styles.avatarOuter}>
+                <View style={styles.avatarInner}>
+                  <Text style={styles.avatarText}>{getInitials(user?.name || 'U')}</Text>
+                </View>
+              </View>
+            </Animated.View>
+            <Text style={styles.name}>{user?.name}</Text>
+            <Text style={styles.email}>{user?.email}</Text>
+            <View style={styles.rolePill}>
+              <Ionicons name="shield-checkmark" size={12} color={COLORS.headerDark} />
+              <Text style={styles.roleText}>{getRoleText(user?.role || '')}</Text>
             </View>
-            <Text style={styles.logoutText}>Cerrar Sesión</Text>
-            <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
-          </TouchableOpacity>
+          </LinearGradient>
 
-          <Text style={styles.version}>Versión 1.0.0</Text>
-        </Animated.View>
-      </ScrollView>
+          {/* Content */}
+          <Animated.View style={[styles.contentContainer, { opacity: fadeAnim }]}>
+            {/* Info Card */}
+            <View style={styles.infoCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>INFORMACIÓN DE LA CUENTA</Text>
+                <View style={styles.sectionLine} />
+              </View>
+              
+              <InfoRow icon="person-outline" label="Nombre" value={user?.name || ''} />
+              <InfoRow icon="mail-outline" label="Correo electrónico" value={user?.email || ''} />
+              <InfoRow icon="shield-checkmark-outline" label="Rol" value={getRoleText(user?.role || '')} />
+            </View>
+
+            {/* Logout Button */}
+            <TouchableOpacity 
+              style={styles.logoutButton} 
+              onPress={() => setShowLogoutModal(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.logoutIconContainer}>
+                <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+              </View>
+              <Text style={styles.logoutText}>Cerrar Sesión</Text>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+
+            <Text style={styles.version}>Versión 1.0.0</Text>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
 
       {/* Logout Modal */}
       <Modal visible={showLogoutModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <Animated.View style={[styles.modalContent, { transform: [{ scale: showLogoutModal ? 1 : 0.9 }] }]}>
             <View style={styles.modalIconContainer}>
-              <Ionicons name="log-out" size={32} color={COLORS.error} />
+              <Ionicons name="log-out" size={28} color={COLORS.error} />
             </View>
             <Text style={styles.modalTitle}>Cerrar Sesión</Text>
             <Text style={styles.modalText}>¿Estás seguro que deseas cerrar sesión?</Text>
@@ -170,33 +174,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 20,
+  },
   header: {
+    marginHorizontal: 16,
+    marginTop: 8,
     paddingTop: 24,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    borderBottomLeftRadius: DESIGN.borderRadius.xl,
-    borderBottomRightRadius: DESIGN.borderRadius.xl,
+    borderRadius: DESIGN.borderRadius.xl,
     ...SHADOWS.colored('#114D27'),
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   avatarOuter: {
-    width: 108,
-    height: 108,
-    borderRadius: 54,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInner: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: COLORS.primaryMedium,
     justifyContent: 'center',
     alignItems: 'center',
@@ -204,45 +215,43 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryLight,
   },
   avatarText: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: -0.03 * 36,
   },
   name: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
-    letterSpacing: -0.03 * 26,
+    marginBottom: 2,
   },
   email: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textOnDarkMuted,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: DESIGN.borderRadius.pill,
-    gap: 6,
+    gap: 4,
   },
   roleText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: COLORS.headerDark,
   },
   contentContainer: {
-    marginTop: -20,
+    marginTop: 16,
     paddingHorizontal: 16,
   },
   infoCard: {
     backgroundColor: COLORS.glassBackground,
     borderRadius: DESIGN.borderRadius.xl,
-    padding: 20,
+    padding: 18,
     borderWidth: 1,
     borderColor: COLORS.glassBorder,
     ...SHADOWS.medium,
@@ -250,14 +259,14 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: COLORS.textMuted,
-    letterSpacing: 0.1 * 11,
-    marginRight: 12,
+    letterSpacing: 1,
+    marginRight: 10,
   },
   sectionLine: {
     flex: 1,
@@ -267,65 +276,63 @@ const styles = StyleSheet.create({
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.separator,
   },
   infoIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: COLORS.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   infoContent: {
     flex: 1,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textMuted,
     marginBottom: 2,
-    letterSpacing: 0.02 * 12,
   },
   infoValue: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.text,
     fontWeight: '500',
-    letterSpacing: -0.01 * 16,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.glassBackground,
-    padding: 16,
+    padding: 14,
     borderRadius: DESIGN.borderRadius.large,
-    marginTop: 20,
+    marginTop: 16,
     borderWidth: 1,
     borderColor: COLORS.errorLight,
     ...SHADOWS.small,
   },
   logoutIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: COLORS.errorLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   logoutText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: COLORS.error,
   },
   version: {
     textAlign: 'center',
-    marginTop: 32,
-    marginBottom: 32,
-    fontSize: 13,
+    marginTop: 28,
+    marginBottom: 20,
+    fontSize: 12,
     color: COLORS.textMuted,
   },
   modalOverlay: {
@@ -338,43 +345,41 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: COLORS.card,
     borderRadius: DESIGN.borderRadius.xl,
-    padding: 28,
+    padding: 24,
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 320,
     alignItems: 'center',
     ...SHADOWS.large,
   },
   modalIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: COLORS.errorLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 8,
-    letterSpacing: -0.03 * 20,
+    marginBottom: 6,
   },
   modalText: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
+    marginBottom: 20,
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     width: '100%',
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: DESIGN.borderRadius.medium,
     alignItems: 'center',
   },
@@ -387,12 +392,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error,
   },
   modalCancelText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
   modalLogoutText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
   },

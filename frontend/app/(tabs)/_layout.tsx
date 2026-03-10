@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS } from '../../src/constants/colors';
+import { Platform } from 'react-native';
 
 export default function TabsLayout() {
   const user = useAuthStore((state) => state.user);
@@ -10,32 +11,35 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
-          backgroundColor: COLORS.card,
+          backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: COLORS.border,
-          paddingBottom: 8,
+          borderTopColor: COLORS.separator,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
           paddingTop: 8,
-          height: 60,
+          paddingHorizontal: 8,
+          height: Platform.OS === 'ios' ? 88 : 64,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: '600',
+          marginTop: 2,
         },
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: COLORS.headerDark,
+        tabBarIconStyle: {
+          marginTop: 4,
         },
-        headerTintColor: '#FFFFFF',
+        tabBarShowLabel: true,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarLabel: 'Inicio',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -43,8 +47,9 @@ export default function TabsLayout() {
         name="trips"
         options={{
           title: 'Viajes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="airplane" size={size} color={color} />
+          tabBarLabel: 'Viajes',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "airplane" : "airplane-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -52,8 +57,9 @@ export default function TabsLayout() {
         name="create-trip"
         options={{
           title: 'Nuevo',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size} color={color} />
+          tabBarLabel: 'Nuevo',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "add-circle" : "add-circle-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -62,8 +68,9 @@ export default function TabsLayout() {
           name="approvals"
           options={{
             title: 'Aprobar',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="checkmark-circle" size={size} color={color} />
+            tabBarLabel: 'Aprobar',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? "checkmark-circle" : "checkmark-circle-outline"} size={24} color={color} />
             ),
           }}
         />
@@ -73,8 +80,9 @@ export default function TabsLayout() {
           name="admin"
           options={{
             title: 'Admin',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings" size={size} color={color} />
+            tabBarLabel: 'Admin',
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />
             ),
           }}
         />
@@ -83,8 +91,9 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarLabel: 'Perfil',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
           ),
         }}
       />
