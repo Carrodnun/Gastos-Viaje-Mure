@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../src/utils/api';
 import { Trip } from '../../src/types';
 import { COLORS } from '../../src/constants/colors';
 
 export default function TripsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [filteredTrips, setFilteredTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +67,8 @@ export default function TripsScreen() {
         return COLORS.approved;
       case 'rejected':
         return COLORS.rejected;
+      case 'closed':
+        return COLORS.info || '#5856D6';
       default:
         return COLORS.textSecondary;
     }
@@ -78,13 +82,15 @@ export default function TripsScreen() {
         return 'Aprobado';
       case 'rejected':
         return 'Rechazado';
+      case 'closed':
+        return 'Cerrado';
       default:
         return status;
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color={COLORS.textMuted} />

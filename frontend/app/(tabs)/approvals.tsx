@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../src/utils/api';
 import { Trip } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
@@ -20,6 +21,7 @@ import { COLORS } from '../../src/constants/colors';
 
 export default function ApprovalsScreen() {
   const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -116,7 +118,7 @@ export default function ApprovalsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         style={styles.scrollView}
         refreshControl={

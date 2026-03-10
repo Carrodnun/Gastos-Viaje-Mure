@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../src/utils/api';
 import { User, CostCenter, ExpenseCategory } from '../../src/types';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,7 @@ import { COLORS } from '../../src/constants/colors';
 
 export default function AdminScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'users' | 'centers' | 'categories'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
@@ -34,6 +36,7 @@ export default function AdminScreen() {
   // Form states
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserName, setNewUserName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState('user');
   const [newCenterName, setNewCenterName] = useState('');
   const [newCenterCode, setNewCenterCode] = useState('');
@@ -71,6 +74,7 @@ export default function AdminScreen() {
   const resetForm = () => {
     setNewUserEmail('');
     setNewUserName('');
+    setNewUserPassword('');
     setNewUserRole('user');
     setNewCenterName('');
     setNewCenterCode('');
@@ -140,6 +144,11 @@ export default function AdminScreen() {
       return;
     }
 
+    if (!editMode && !newUserPassword) {
+      showAlert('Error', 'Por favor ingresa una contraseña para el usuario');
+      return;
+    }
+
     try {
       setLoading(true);
       if (editMode && editId) {
@@ -150,12 +159,13 @@ export default function AdminScreen() {
         });
         showAlert('Éxito', 'Usuario actualizado');
       } else {
-        const response = await api.post('/api/admin/users', {
+        await api.post('/api/admin/users', {
           email: newUserEmail,
           name: newUserName,
+          password: newUserPassword,
           role: newUserRole,
         });
-        showAlert('Éxito', `Usuario creado. Contraseña temporal: ${response.data.temporary_password}`);
+        showAlert('Éxito', 'Usuario creado correctamente');
       }
       setShowModal(false);
       resetForm();
@@ -262,7 +272,7 @@ export default function AdminScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'users' && styles.tabActive]}
@@ -448,6 +458,16 @@ export default function AdminScreen() {
                   autoCapitalize="none"
                   placeholderTextColor={COLORS.textMuted}
                 />
+                {!editMode && (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Contraseña"
+                    value={newUserPassword}
+                    onChangeText={setNewUserPassword}
+                    secureTextEntry
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                )}
                 <View style={styles.roleSelector}>
                   <TouchableOpacity
                     style={[

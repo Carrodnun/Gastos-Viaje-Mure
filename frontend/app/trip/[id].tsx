@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,7 +30,10 @@ export default function TripDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [closeLoading, setCloseLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -94,6 +98,73 @@ export default function TripDetailScreen() {
     router.push(`/expense/create?tripId=${id}`);
   };
 
+  const handleCloseTrip = async () => {
+    try {
+      setCloseLoading(true);
+      await api.post(`/api/trips/${id}/close`);
+      setShowCloseModal(false);
+      
+      const msg = 'Viaje cerrado correctamente';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Éxito', msg);
+      }
+      
+      loadData();
+    } catch (error: any) {
+      console.error('Error closing trip:', error);
+      const errorMsg = error.response?.data?.detail || 'Error al cerrar el viaje';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    } finally {
+      setCloseLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExportLoading(true);
+      const baseUrl = api.defaults.baseURL || '';
+      const exportUrl = `${baseUrl}/api/trips/${id}/export/excel`;
+      
+      if (Platform.OS === 'web') {
+        // On web, trigger download via a hidden link
+        const response = await api.get(`/api/trips/${id}/export/excel`, {
+          responseType: 'blob',
+        });
+        const blob = new Blob([response.data], { 
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `gastos_${trip?.name?.replace(/\s/g, '_') || 'viaje'}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        window.alert('Excel descargado correctamente');
+      } else {
+        // On mobile, open in browser
+        await Linking.openURL(exportUrl);
+      }
+    } catch (error: any) {
+      console.error('Error exporting:', error);
+      const errorMsg = error.response?.data?.detail || 'Error al exportar';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const handleDeleteTrip = async () => {
     try {
       setDeleteLoading(true);
@@ -134,6 +205,8 @@ export default function TripDetailScreen() {
         return COLORS.approved;
       case 'rejected':
         return COLORS.rejected;
+      case 'closed':
+        return COLORS.info || '#5856D6';
       default:
         return COLORS.textSecondary;
     }
@@ -147,6 +220,8 @@ export default function TripDetailScreen() {
         return 'Aprobado';
       case 'rejected':
         return 'Rechazado';
+      case 'closed':
+        return 'Cerrado';
       default:
         return status;
     }
@@ -300,7 +375,45 @@ export default function TripDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {trip.status !== 'approved' && (
+        {/* Botón para cerrar viaje cuando está aprobado */}
+        {trip.status === 'approved' && (
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={() => setShowCloseModal(true)}
+          >
+            <Ionicons name="lock-closed" size={20} color={COLORS.info || '#5856D6'} />
+            <Text style={styles.closeButtonText}>Cerrar Viaje</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Botón para exportar Excel cuando está cerrado */}
+        {trip.status === 'closed' && (
+          <TouchableOpacity 
+            style={styles.exportButton} 
+            onPress={handleExportExcel}
+            disabled={exportLoading}
+          >
+            {exportLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Ionicons name="download" size={20} color="#FFFFFF" />
+                <Text style={styles.exportButtonText}>Exportar a Excel</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {trip.status === 'closed' && (
+          <View style={styles.closedInfoCard}>
+            <Ionicons name="lock-closed" size={24} color={COLORS.info || '#5856D6'} />
+            <Text style={styles.closedInfoText}>
+              Este viaje está cerrado. No se pueden añadir más gastos.
+            </Text>
+          </View>
+        )}
+
+        {trip.status !== 'approved' && trip.status !== 'closed' && (
           <View style={styles.warningCard}>
             <Ionicons name="information-circle" size={24} color={COLORS.warning} />
             <Text style={styles.warningText}>
@@ -377,6 +490,44 @@ export default function TripDetailScreen() {
           <Ionicons name="add" size={32} color="#FFFFFF" />
         </TouchableOpacity>
       )}
+
+      {/* Modal de confirmación para cerrar viaje */}
+      <Modal visible={showCloseModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="lock-closed" size={48} color={COLORS.info || '#5856D6'} />
+            </View>
+            <Text style={styles.modalTitle}>Cerrar Viaje</Text>
+            <Text style={styles.modalText}>
+              ¿Estás seguro que deseas cerrar "{trip.name}"?
+            </Text>
+            <Text style={styles.modalWarning}>
+              Una vez cerrado, no se podrán añadir más gastos. Podrás exportar el viaje a Excel.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowCloseModal(false)}
+                disabled={closeLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: COLORS.info || '#5856D6' }]}
+                onPress={handleCloseTrip}
+                disabled={closeLoading}
+              >
+                {closeLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>Cerrar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal de confirmación para eliminar */}
       <Modal visible={showDeleteModal} transparent animationType="fade">
@@ -670,6 +821,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  closeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 14,
+    borderWidth: 2,
+    borderColor: COLORS.info || '#5856D6',
+    borderRadius: 12,
+    backgroundColor: '#F0EFFE',
+  },
+  closeButtonText: {
+    color: COLORS.info || '#5856D6',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+  },
+  exportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  closedInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDE9FE',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  closedInfoText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#5B21B6',
+    marginLeft: 12,
   },
   fab: {
     position: 'absolute',

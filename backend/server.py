@@ -110,6 +110,7 @@ class RegisterRequest(BaseModel):
 class CreateUserRequest(BaseModel):
     email: str
     name: str
+    password: str
     role: str = "user"
 
 class UpdateUserRoleRequest(BaseModel):
@@ -334,8 +335,7 @@ async def create_user(
         raise HTTPException(status_code=400, detail="User already exists")
     
     # Create temporary password (user should change it on first login)
-    temp_password = "Password123!"  # En producción, generar contraseña aleatoria y enviar por email
-    password_hash = get_password_hash(temp_password)
+    password_hash = get_password_hash(data.password)
     
     user = {
         "user_id": f"user_{uuid.uuid4().hex[:12]}",
@@ -350,8 +350,7 @@ async def create_user(
     await db.users.insert_one(user)
     return {
         "message": "User created",
-        "user_id": user["user_id"],
-        "temporary_password": temp_password
+        "user_id": user["user_id"]
     }
 
 @app.get("/api/admin/users")
@@ -745,6 +744,45 @@ async def reject_trip(
     
     return {"message": "Trip rejected"}
 
+@app.post("/api/trips/{trip_id}/close")
+async def close_trip(
+    trip_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Close a trip - any participant can close an approved trip"""
+    trip = await db.trips.find_one({"trip_id": trip_id}, {"_id": 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip["status"] != "approved":
+        raise HTTPException(status_code=400, detail="Solo se pueden cerrar viajes aprobados")
+    
+    # Any participant or admin/approver can close
+    if current_user.user_id not in trip["participants"] and current_user.role not in ["approver", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    result = await db.trips.update_one(
+        {"trip_id": trip_id},
+        {
+            "$set": {
+                "status": "closed",
+                "closed_by": current_user.user_id,
+                "closed_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Audit log
+    await create_audit_log(
+        "trip",
+        trip_id,
+        "closed",
+        current_user.user_id,
+        {"closed_by": current_user.user_id}
+    )
+    
+    return {"message": "Trip closed"}
+
 @app.delete("/api/trips/{trip_id}")
 async def delete_trip(
     trip_id: str,
@@ -949,7 +987,117 @@ async def get_audit_logs(
     
     return {"logs": logs}
 
-# Excel Export
+# Excel Export per trip (accessible to all participants)
+@app.get("/api/trips/{trip_id}/export/excel")
+async def export_trip_to_excel(
+    trip_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Export a closed trip's expenses to Excel"""
+    trip = await db.trips.find_one({"trip_id": trip_id}, {"_id": 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip["status"] != "closed":
+        raise HTTPException(status_code=400, detail="Solo se pueden exportar viajes cerrados")
+    
+    # Check access - participant or admin/approver
+    if current_user.user_id not in trip["participants"] and current_user.role not in ["approver", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get expenses for this trip
+    expenses = await db.expenses.find({"trip_id": trip_id}, {"_id": 0}).sort("date", 1).to_list(10000)
+    
+    if not expenses:
+        raise HTTPException(status_code=404, detail="No hay gastos registrados en este viaje")
+    
+    # Get related data
+    user_ids = list(set([e["user_id"] for e in expenses]))
+    category_ids = list(set([e.get("category_id", "") for e in expenses if e.get("category_id")]))
+    
+    users_list = await db.users.find({"user_id": {"$in": user_ids}}, {"_id": 0}).to_list(1000)
+    categories = await db.expense_categories.find({"category_id": {"$in": category_ids}}, {"_id": 0}).to_list(1000)
+    
+    user_map = {u["user_id"]: u["name"] for u in users_list}
+    category_map = {c["category_id"]: c["name"] for c in categories}
+    
+    # Get cost center
+    cost_center = await db.cost_centers.find_one({"center_id": trip.get("cost_center_id", "")}, {"_id": 0})
+    cost_center_name = cost_center["name"] if cost_center else "N/A"
+    
+    # Create Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Gastos del Viaje"
+    
+    # Trip info header
+    title_font = Font(size=14, bold=True, color="1B7A3E")
+    ws.cell(row=1, column=1, value=f"Viaje: {trip['name']}").font = title_font
+    ws.cell(row=2, column=1, value=f"Centro de Coste: {cost_center_name}").font = Font(size=11)
+    ws.cell(row=3, column=1, value=f"Estado: Cerrado").font = Font(size=11)
+    ws.cell(row=4, column=1, value=f"Exportado: {datetime.now().strftime('%d/%m/%Y %H:%M')}").font = Font(size=11)
+    
+    # Column headers (row 6)
+    headers = ["FECHA", "HORA", "USUARIO", "TIPO DE GASTO", "NOMBRE DEL GASTO", "IMPORTE (€)", "IMAGEN ADJUNTA"]
+    header_fill = PatternFill(start_color="1B7A3E", end_color="1B7A3E", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11)
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=6, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+    
+    # Data rows
+    for row_idx, expense in enumerate(expenses, 7):
+        expense_date = expense.get("date")
+        if isinstance(expense_date, datetime):
+            fecha = expense_date.strftime("%d/%m/%Y")
+            hora = expense_date.strftime("%H:%M")
+        else:
+            fecha = str(expense_date)
+            hora = ""
+        
+        ws.cell(row=row_idx, column=1, value=fecha)
+        ws.cell(row=row_idx, column=2, value=hora)
+        ws.cell(row=row_idx, column=3, value=user_map.get(expense["user_id"], "N/A"))
+        ws.cell(row=row_idx, column=4, value=category_map.get(expense.get("category_id", ""), "N/A"))
+        ws.cell(row=row_idx, column=5, value=expense.get("establishment", "N/A"))
+        
+        amount_cell = ws.cell(row=row_idx, column=6, value=expense.get("amount", 0))
+        amount_cell.number_format = '#,##0.00'
+        
+        has_image = "Sí" if expense.get("receipt_image") else "No"
+        ws.cell(row=row_idx, column=7, value=has_image)
+    
+    # Total row
+    total_row = 7 + len(expenses)
+    ws.cell(row=total_row, column=5, value="TOTAL").font = Font(bold=True, size=12)
+    total_amount = sum(e.get("amount", 0) for e in expenses)
+    total_cell = ws.cell(row=total_row, column=6, value=total_amount)
+    total_cell.font = Font(bold=True, size=12)
+    total_cell.number_format = '#,##0.00'
+    
+    # Adjust column widths
+    col_widths = [14, 10, 20, 22, 25, 15, 16]
+    for col, width in enumerate(col_widths, 1):
+        ws.column_dimensions[chr(64 + col)].width = width
+    
+    # Save to BytesIO
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+    
+    safe_name = trip['name'].replace(' ', '_').replace('/', '_')[:30]
+    filename = f"gastos_{safe_name}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        excel_file,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# Excel Export (admin - all expenses)
 @app.get("/api/admin/export/excel")
 async def export_to_excel(
     trip_id: Optional[str] = None,

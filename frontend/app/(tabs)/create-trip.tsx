@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../src/utils/api';
 import { CostCenter, User } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
@@ -20,6 +21,7 @@ import { COLORS } from '../../src/constants/colors';
 
 export default function CreateTripScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user: currentUser } = useAuthStore();
   const [name, setName] = useState('');
   const [costCenterId, setCostCenterId] = useState('');
@@ -99,9 +101,12 @@ export default function CreateTripScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View style={styles.screenHeader}>
+        <Text style={styles.screenTitle}>Nuevo Viaje</Text>
+      </View>
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.label}>Nombre del Viaje *</Text>
@@ -251,6 +256,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  screenHeader: {
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  screenTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.text,
   },
   section: {
     marginBottom: 24,
