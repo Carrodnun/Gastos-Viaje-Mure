@@ -68,6 +68,7 @@ export default function HomeScreen() {
       case 'pending': return COLORS.pending;
       case 'approved': return COLORS.approved;
       case 'rejected': return COLORS.rejected;
+      case 'closed': return COLORS.info;
       default: return COLORS.textSecondary;
     }
   };
@@ -77,6 +78,7 @@ export default function HomeScreen() {
       case 'pending': return 'Pendiente';
       case 'approved': return 'Aprobado';
       case 'rejected': return 'Rechazado';
+      case 'closed': return 'Cerrado';
       default: return status;
     }
   };

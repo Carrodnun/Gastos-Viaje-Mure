@@ -146,7 +146,7 @@ EXPO_PUBLIC_BACKEND_URL=https://tu-servidor-real.com
 ### Para la versión actual (desarrollo):
 La app está configurada para conectarse a:
 ```
-https://trip-manager-56.preview.emergentagent.com
+https://trip-export-manager.preview.emergentagent.com
 ```
 
 ---

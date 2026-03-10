@@ -12,7 +12,6 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -47,31 +46,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       console.error('Login error:', error.response?.data || error);
       throw new Error(error.response?.data?.detail || 'Login failed');
-    }
-  },
-
-  register: async (email: string, password: string, name: string) => {
-    try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, {
-        email,
-        password,
-        name
-      });
-
-      const { user, access_token } = response.data;
-      
-      // Save token to AsyncStorage
-      await AsyncStorage.setItem('access_token', access_token);
-      
-      set({
-        user,
-        accessToken: access_token,
-        isAuthenticated: true,
-        isLoading: false
-      });
-    } catch (error: any) {
-      console.error('Register error:', error.response?.data || error);
-      throw new Error(error.response?.data?.detail || 'Registration failed');
     }
   },
 

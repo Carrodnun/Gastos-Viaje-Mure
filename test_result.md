@@ -367,42 +367,33 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Initial implementation complete. Full-stack expense tracking app created with:
+    message: "Initial implementation complete. Full-stack expense tracking app created."
+  - agent: "main"
+    message: "Reviewed and fixed 4 tasks requested by user:
     
-    BACKEND (FastAPI):
-    - Authentication via Emergent Auth (Microsoft OAuth)
-    - Role-based access control (user/approver/admin)
-    - Complete API for trips, expenses, cost centers, categories
-    - Approval workflow for trips
-    - Excel export functionality
-    - Audit logging
-    - Base64 image storage for receipts
+    1. PASSWORD MANAGEMENT: 
+       - Already implemented: Admin creates passwords for users via admin panel
+       - Fixed: Removed public /api/auth/register endpoint (security hole)
+       - Fixed: Removed register function from authStore
+       - Users cannot change passwords (no such endpoint)
     
-    FRONTEND (Expo React Native):
-    - Bottom tab navigation with role-based visibility
-    - Dashboard with statistics
-    - Trip management with search and filters
-    - Expense tracking with camera integration
-    - Admin panel for user/cost center/category management
-    - Approval workflow UI
-    - Profile and logout
+    2. CLOSE TRIPS:
+       - Already implemented: Backend POST /api/trips/{trip_id}/close endpoint
+       - Already implemented: Frontend close button with confirmation modal
+       - Fixed: Added 'closed' to Trip TypeScript type
+       - Fixed: Added 'Cerrados' filter chip in trips list
     
-    TEST DATA:
-    - 3 test users created (admin, approver, user)
-    - 5 cost centers
-    - 10 expense categories
+    3. iPHONE NOTCH/SAFE AREA:
+       - Fixed: Added SafeAreaProvider to root _layout.tsx
+       - This wraps the entire app with proper safe area context
+       - Screens already use useSafeAreaInsets() which now works correctly
     
-    READY FOR TESTING:
-    Please test all functionality starting with authentication. Test users:
-    - admin@empresa.com (role: admin)
-    - autorizador@empresa.com (role: approver)
-    - trabajador@empresa.com (role: user)
+    4. EXPORT TO EXCEL PER TRIP:
+       - Already fully implemented: Backend endpoint includes all required columns
+       - FECHA, HORA, USUARIO, TIPO DE GASTO, NOMBRE DEL GASTO, IMPORTE, IMAGEN ADJUNTA
+       - Export button appears inside closed trips
     
-    Key flows to test:
-    1. Admin creates users and cost centers
-    2. User creates trip with participants
-    3. Approver approves trip
-    4. User adds expenses with camera/gallery
-    5. Admin exports to Excel
-    
-    Note: Camera permissions need to be granted on first use."
+    Additional fixes:
+    - Excluded password_hash from admin users list API response
+    - Added 'closed' status handling to home screen status colors
+    - Created test users with proper password hashes"

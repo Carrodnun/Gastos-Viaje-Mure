@@ -102,11 +102,6 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-class RegisterRequest(BaseModel):
-    email: str
-    password: str
-    name: str
-
 class CreateUserRequest(BaseModel):
     email: str
     name: str
@@ -226,48 +221,7 @@ async def create_audit_log(
     await db.audit_logs.insert_one(log)
 
 # Auth Endpoints
-@app.post("/api/auth/register")
-async def register(data: RegisterRequest):
-    """Register a new user (public endpoint)"""
-    try:
-        # Check if user already exists
-        existing = await db.users.find_one({"email": data.email}, {"_id": 0})
-        if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
-        
-        # Create user
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        password_hash = get_password_hash(data.password)
-        
-        user = {
-            "user_id": user_id,
-            "email": data.email,
-            "name": data.name,
-            "password_hash": password_hash,
-            "picture": None,
-            "role": "user",
-            "created_at": datetime.now(timezone.utc)
-        }
-        
-        await db.users.insert_one(user)
-        
-        # Create JWT token
-        access_token = create_access_token({"user_id": user_id})
-        
-        # Remove password_hash from response
-        user.pop("password_hash")
-        user.pop("_id", None)
-        
-        return {
-            "user": user,
-            "access_token": access_token,
-            "token_type": "bearer"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Registration error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# NOTE: Public registration is disabled. Only admins can create users via /api/admin/users
 
 @app.post("/api/auth/login")
 async def login(data: LoginRequest, response: Response):
@@ -357,7 +311,7 @@ async def create_user(
 async def list_users(current_user: User = Depends(get_current_user)):
     await require_role(current_user, ["admin"])
     
-    users = await db.users.find({}, {"_id": 0}).to_list(1000)
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
     return {"users": users}
 
 class UpdateUserRequest(BaseModel):

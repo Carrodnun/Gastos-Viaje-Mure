@@ -28,12 +28,14 @@ export interface Trip {
   name: string;
   creator_id: string;
   cost_center_id: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'closed';
   participants: string[];
   created_at: string;
   approved_by?: string;
   approved_at?: string;
   rejection_reason?: string;
+  closed_by?: string;
+  closed_at?: string;
 }
 
 export interface Expense {

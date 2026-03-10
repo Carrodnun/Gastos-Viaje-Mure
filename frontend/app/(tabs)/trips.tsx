@@ -170,6 +170,22 @@ export default function TripsScreen() {
               Rechazados
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterChip,
+              filterStatus === 'closed' && styles.filterChipActive,
+            ]}
+            onPress={() => setFilterStatus('closed')}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filterStatus === 'closed' && styles.filterTextActive,
+              ]}
+            >
+              Cerrados
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
