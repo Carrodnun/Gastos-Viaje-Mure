@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import api from '../../src/utils/api';
 import { Trip, Expense, User, CostCenter } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
@@ -128,33 +130,68 @@ export default function TripDetailScreen() {
   const handleExportExcel = async () => {
     try {
       setExportLoading(true);
-      const baseUrl = api.defaults.baseURL || '';
-      const exportUrl = `${baseUrl}/api/trips/${id}/export/excel`;
-      
+      const filename = `gastos_${trip?.name?.replace(/\s/g, '_') || 'viaje'}.xlsx`;
+
       if (Platform.OS === 'web') {
-        // On web, trigger download via a hidden link
-        const response = await api.get(`/api/trips/${id}/export/excel`, {
-          responseType: 'blob',
+        // Web: Use fetch with auth header to get blob, then trigger download
+        const baseUrl = api.defaults.baseURL || '';
+        const token = useAuthStore.getState().accessToken;
+        const response = await fetch(`${baseUrl}/api/trips/${id}/export/excel`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
         });
-        const blob = new Blob([response.data], { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || 'Error al exportar');
+        }
+
+        const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `gastos_${trip?.name?.replace(/\s/g, '_') || 'viaje'}.xlsx`;
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
         window.alert('Excel descargado correctamente');
       } else {
-        // On mobile, open in browser
-        await Linking.openURL(exportUrl);
+        // Mobile: Use expo-file-system to download with auth, then share
+        const baseUrl = api.defaults.baseURL || '';
+        const token = useAuthStore.getState().accessToken;
+        const fileUri = FileSystem.documentDirectory + filename;
+
+        const downloadResult = await FileSystem.downloadAsync(
+          `${baseUrl}/api/trips/${id}/export/excel`,
+          fileUri,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (downloadResult.status !== 200) {
+          throw new Error('Error al descargar el archivo');
+        }
+
+        // Check if sharing is available and share the file
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(downloadResult.uri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Guardar Excel de gastos',
+            UTI: 'org.openxmlformats.spreadsheetml.sheet',
+          });
+        } else {
+          Alert.alert('Éxito', 'Archivo descargado correctamente');
+        }
       }
     } catch (error: any) {
       console.error('Error exporting:', error);
-      const errorMsg = error.response?.data?.detail || 'Error al exportar';
+      const errorMsg = error.message || error.response?.data?.detail || 'Error al exportar';
       if (Platform.OS === 'web') {
         window.alert('Error: ' + errorMsg);
       } else {

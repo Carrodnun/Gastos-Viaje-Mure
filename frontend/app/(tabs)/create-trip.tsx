@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../src/utils/api';
@@ -32,9 +33,21 @@ export default function CreateTripScreen() {
   const [showCostCenterModal, setShowCostCenterModal] = useState(false);
   const [showUserPicker, setShowUserPicker] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Reset form every time the tab is focused
+  useFocusEffect(
+    useCallback(() => {
+      resetForm();
+      loadData();
+    }, [])
+  );
+
+  const resetForm = () => {
+    setName('');
+    setCostCenterId('');
+    setSelectedParticipants([]);
+    setShowCostCenterModal(false);
+    setShowUserPicker(false);
+  };
 
   const loadData = async () => {
     try {
@@ -62,23 +75,26 @@ export default function CreateTripScreen() {
 
     try {
       setLoading(true);
-      const response = await api.post('/api/trips', {
+      await api.post('/api/trips', {
         name: name.trim(),
         cost_center_id: costCenterId,
         participants: selectedParticipants,
       });
 
-      Alert.alert('Éxito', 'Viaje creado correctamente', [
-        {
-          text: 'OK',
-          onPress: () => {
-            setName('');
-            setCostCenterId('');
-            setSelectedParticipants([]);
-            router.push(`/trip/${response.data.trip_id}`);
-          },
-        },
-      ]);
+      // Reset form immediately
+      resetForm();
+
+      // Navigate to home (dashboard) tab
+      router.replace('/(tabs)/home');
+
+      // Show success feedback after navigation
+      setTimeout(() => {
+        if (Platform.OS === 'web') {
+          window.alert('Viaje creado correctamente');
+        } else {
+          Alert.alert('Éxito', 'Viaje creado correctamente');
+        }
+      }, 300);
     } catch (error: any) {
       Alert.alert(
         'Error',

@@ -147,12 +147,17 @@ export default function CreateExpenseScreen() {
         notes: notes.trim() || null,
       });
 
-      Alert.alert('Éxito', 'Gasto creado correctamente', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
+      // Navigate back to trip detail immediately
+      router.back();
+
+      // Show success message after navigation
+      setTimeout(() => {
+        if (Platform.OS === 'web') {
+          window.alert('Gasto creado correctamente');
+        } else {
+          Alert.alert('Éxito', 'Gasto creado correctamente');
+        }
+      }, 300);
     } catch (error: any) {
       Alert.alert(
         'Error',

@@ -537,6 +537,9 @@ async def create_trip(
     
     await db.trips.insert_one(trip)
     
+    # Remove MongoDB _id for serialization
+    trip.pop("_id", None)
+    
     # Audit log
     await create_audit_log(
         "trip",

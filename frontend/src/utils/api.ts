@@ -6,7 +6,6 @@ const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || process.env.EXPO_
 
 const api = axios.create({
   baseURL: BACKEND_URL,
-  withCredentials: true,
 });
 
 // Request interceptor to add auth token
