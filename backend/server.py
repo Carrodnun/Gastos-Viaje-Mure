@@ -22,7 +22,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -948,8 +948,28 @@ async def get_audit_logs(
 @app.get("/api/trips/{trip_id}/export/excel")
 async def export_trip_to_excel(
     trip_id: str,
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    token: Optional[str] = None,
 ):
+    """Export a closed trip's expenses to Excel. 
+    Supports auth via Authorization header or ?token= query parameter."""
+    # Support token via query parameter (for browser direct downloads)
+    current_user_payload = None
+    if token:
+        current_user_payload = decode_access_token(token)
+    else:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            current_user_payload = decode_access_token(auth_header.split(" ")[1])
+    
+    if not current_user_payload:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    user_id = current_user_payload.get("user_id")
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="User not found")
+    
     """Export a closed trip's expenses to Excel"""
     trip = await db.trips.find_one({"trip_id": trip_id}, {"_id": 0})
     if not trip:
@@ -959,7 +979,7 @@ async def export_trip_to_excel(
         raise HTTPException(status_code=400, detail="Solo se pueden exportar viajes cerrados")
     
     # Check access - participant or admin/approver
-    if current_user.user_id not in trip["participants"] and current_user.role not in ["approver", "admin"]:
+    if user_id not in trip["participants"] and user_doc.get("role") not in ["approver", "admin"]:
         raise HTTPException(status_code=403, detail="Access denied")
     
     # Get expenses for this trip

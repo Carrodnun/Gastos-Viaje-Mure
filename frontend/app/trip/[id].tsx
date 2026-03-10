@@ -130,68 +130,46 @@ export default function TripDetailScreen() {
   const handleExportExcel = async () => {
     try {
       setExportLoading(true);
-      const filename = `gastos_${trip?.name?.replace(/\s/g, '_') || 'viaje'}.xlsx`;
+      const baseUrl = api.defaults.baseURL || '';
+      const token = useAuthStore.getState().accessToken;
+      const exportUrl = `${baseUrl}/api/trips/${id}/export/excel?token=${token}`;
 
       if (Platform.OS === 'web') {
-        // Web: Use fetch with auth header to get blob, then trigger download
-        const baseUrl = api.defaults.baseURL || '';
-        const token = useAuthStore.getState().accessToken;
-        const response = await fetch(`${baseUrl}/api/trips/${id}/export/excel`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || 'Error al exportar');
-        }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        window.alert('Excel descargado correctamente');
+        // Web: Open URL directly - browser handles the download natively
+        window.open(exportUrl, '_blank');
       } else {
-        // Mobile: Use expo-file-system to download with auth, then share
-        const baseUrl = api.defaults.baseURL || '';
-        const token = useAuthStore.getState().accessToken;
-        const fileUri = FileSystem.documentDirectory + filename;
+        // Mobile: Use Linking to open the URL (triggers download in browser)
+        // Or use FileSystem + Sharing for a native experience
+        try {
+          const filename = `gastos_${trip?.name?.replace(/\s/g, '_') || 'viaje'}.xlsx`;
+          const fileUri = FileSystem.documentDirectory + filename;
 
-        const downloadResult = await FileSystem.downloadAsync(
-          `${baseUrl}/api/trips/${id}/export/excel`,
-          fileUri,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
+          const downloadResult = await FileSystem.downloadAsync(
+            exportUrl,
+            fileUri
+          );
+
+          if (downloadResult.status !== 200) {
+            throw new Error('Error al descargar el archivo');
           }
-        );
 
-        if (downloadResult.status !== 200) {
-          throw new Error('Error al descargar el archivo');
-        }
-
-        // Check if sharing is available and share the file
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(downloadResult.uri, {
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            dialogTitle: 'Guardar Excel de gastos',
-            UTI: 'org.openxmlformats.spreadsheetml.sheet',
-          });
-        } else {
-          Alert.alert('Éxito', 'Archivo descargado correctamente');
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(downloadResult.uri, {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              dialogTitle: 'Guardar Excel de gastos',
+              UTI: 'org.openxmlformats.spreadsheetml.sheet',
+            });
+          } else {
+            Alert.alert('Éxito', 'Archivo descargado correctamente');
+          }
+        } catch (mobileError) {
+          // Fallback: open in browser
+          await Linking.openURL(exportUrl);
         }
       }
     } catch (error: any) {
       console.error('Error exporting:', error);
-      const errorMsg = error.message || error.response?.data?.detail || 'Error al exportar';
+      const errorMsg = error.message || 'Error al exportar';
       if (Platform.OS === 'web') {
         window.alert('Error: ' + errorMsg);
       } else {
@@ -426,8 +404,17 @@ export default function TripDetailScreen() {
         {/* Botón para exportar Excel cuando está cerrado */}
         {trip.status === 'closed' && (
           <TouchableOpacity 
-            style={styles.exportButton} 
-            onPress={handleExportExcel}
+            style={[
+              styles.exportButton,
+              expenses.length === 0 && styles.exportButtonDisabled,
+            ]} 
+            onPress={expenses.length > 0 ? handleExportExcel : () => {
+              if (Platform.OS === 'web') {
+                window.alert('No hay gastos para exportar en este viaje');
+              } else {
+                Alert.alert('Sin gastos', 'No hay gastos para exportar en este viaje');
+              }
+            }}
             disabled={exportLoading}
           >
             {exportLoading ? (
@@ -435,7 +422,9 @@ export default function TripDetailScreen() {
             ) : (
               <>
                 <Ionicons name="download" size={20} color="#FFFFFF" />
-                <Text style={styles.exportButtonText}>Exportar a Excel</Text>
+                <Text style={styles.exportButtonText}>
+                  {expenses.length > 0 ? 'Exportar a Excel' : 'Sin gastos para exportar'}
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -886,6 +875,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     backgroundColor: COLORS.primary,
+  },
+  exportButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.7,
   },
   exportButtonText: {
     color: '#FFFFFF',
