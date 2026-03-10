@@ -47,13 +47,9 @@
     "experiments": {
       "typedRoutes": true
     },
-    "owner": "carrodnun",
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "auto"
       }
     }
   }

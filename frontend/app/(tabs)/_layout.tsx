@@ -1,102 +1,111 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS } from '../../src/constants/colors';
-import { Platform } from 'react-native';
+import { Platform, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function TabsLayout() {
-  const user = useAuthStore((state) => state.user);
+type TabItem = {
+  name: string;
+  label: string;
+  iconFocused: string;
+  iconOutline: string;
+};
+
+function CustomTabBar({ state, descriptors, navigation }: any) {
+  const user = useAuthStore((s) => s.user);
+  const insets = useSafeAreaInsets();
+  const isApproverOrAdmin = user?.role === 'approver' || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
+
+  const tabConfig: Record<string, { label: string; iconFocused: string; iconOutline: string; visible: boolean }> = {
+    home: { label: 'Inicio', iconFocused: 'home', iconOutline: 'home-outline', visible: true },
+    trips: { label: 'Viajes', iconFocused: 'airplane', iconOutline: 'airplane-outline', visible: true },
+    'create-trip': { label: 'Nuevo', iconFocused: 'add-circle', iconOutline: 'add-circle-outline', visible: true },
+    approvals: { label: 'Aprobar', iconFocused: 'checkmark-circle', iconOutline: 'checkmark-circle-outline', visible: isApproverOrAdmin },
+    admin: { label: 'Admin', iconFocused: 'settings', iconOutline: 'settings-outline', visible: isAdmin },
+    profile: { label: 'Perfil', iconFocused: 'person', iconOutline: 'person-outline', visible: true },
+  };
 
   return (
+    <View style={[tabBarStyles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {state.routes.map((route: any, index: number) => {
+        const config = tabConfig[route.name];
+        if (!config || !config.visible) return null;
+
+        const isFocused = state.index === index;
+        const color = isFocused ? COLORS.primary : COLORS.textMuted;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            onPress={onPress}
+            style={tabBarStyles.tab}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name={(isFocused ? config.iconFocused : config.iconOutline) as any}
+              size={22}
+              color={color}
+            />
+            <Text style={[tabBarStyles.label, { color }]}>
+              {config.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const tabBarStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(60, 60, 67, 0.12)',
+    paddingTop: 8,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+});
+
+export default function TabsLayout() {
+  return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: COLORS.separator,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-          paddingTop: 8,
-          paddingHorizontal: 8,
-          height: Platform.OS === 'ios' ? 88 : 64,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
-          marginTop: 2,
-        },
-        tabBarIconStyle: {
-          marginTop: 4,
-        },
-        tabBarShowLabel: true,
         headerShown: false,
       }}
     >
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Inicio',
-          tabBarLabel: 'Inicio',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="trips"
-        options={{
-          title: 'Viajes',
-          tabBarLabel: 'Viajes',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "airplane" : "airplane-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="create-trip"
-        options={{
-          title: 'Nuevo',
-          tabBarLabel: 'Nuevo',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "add-circle" : "add-circle-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      {(user?.role === 'approver' || user?.role === 'admin') && (
-        <Tabs.Screen
-          name="approvals"
-          options={{
-            title: 'Aprobar',
-            tabBarLabel: 'Aprobar',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? "checkmark-circle" : "checkmark-circle-outline"} size={24} color={color} />
-            ),
-          }}
-        />
-      )}
-      {user?.role === 'admin' && (
-        <Tabs.Screen
-          name="admin"
-          options={{
-            title: 'Admin',
-            tabBarLabel: 'Admin',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons name={focused ? "settings" : "settings-outline"} size={24} color={color} />
-            ),
-          }}
-        />
-      )}
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Perfil',
-          tabBarLabel: 'Perfil',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="home" />
+      <Tabs.Screen name="trips" />
+      <Tabs.Screen name="create-trip" />
+      <Tabs.Screen name="approvals" />
+      <Tabs.Screen name="admin" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
