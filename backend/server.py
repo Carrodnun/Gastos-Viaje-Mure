@@ -148,7 +148,7 @@ class CreateExpenseRequest(BaseModel):
     date: str  # ISO format
     establishment: str
     category_id: str
-    receipt_image: str  # base64
+    receipt_image: Optional[str] = None  # base64, optional
     notes: Optional[str] = None
 
 class UpdateExpenseRequest(BaseModel):
@@ -231,12 +231,12 @@ async def login(data: LoginRequest, response: Response):
         user_doc = await db.users.find_one({"email": data.email}, {"_id": 0})
         
         if not user_doc:
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+            raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
         
         # Verify password
         password_hash = user_doc.get("password_hash")
         if not password_hash or not verify_password(data.password, password_hash):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+            raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
         
         # Create JWT token
         access_token = create_access_token({"user_id": user_doc["user_id"]})
@@ -274,6 +274,15 @@ async def get_me(current_user: User = Depends(get_current_user)):
 async def logout(response: Response):
     response.delete_cookie("access_token", path="/")
     return {"message": "Logged out"}
+
+
+# Public Endpoints (all authenticated users)
+@app.get("/api/users")
+async def list_all_users(current_user: User = Depends(get_current_user)):
+    """List all users - accessible to all authenticated users (for participant selection)"""
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(1000)
+    return {"users": users}
+
 
 # Admin Endpoints - User Management
 @app.post("/api/admin/users")
@@ -739,6 +748,50 @@ async def close_trip(
     )
     
     return {"message": "Trip closed"}
+
+@app.post("/api/trips/{trip_id}/reopen")
+async def reopen_trip(
+    trip_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Reopen a closed trip - accessible to all roles"""
+    trip = await db.trips.find_one({"trip_id": trip_id}, {"_id": 0})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip["status"] != "closed":
+        raise HTTPException(status_code=400, detail="Only closed trips can be reopened")
+    
+    # Any participant or admin/approver can reopen
+    if current_user.user_id not in trip["participants"] and current_user.role not in ["approver", "admin"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    await db.trips.update_one(
+        {"trip_id": trip_id},
+        {
+            "$set": {
+                "status": "approved",
+                "reopened_by": current_user.user_id,
+                "reopened_at": datetime.now(timezone.utc)
+            },
+            "$unset": {
+                "closed_by": "",
+                "closed_at": ""
+            }
+        }
+    )
+    
+    await create_audit_log(
+        "trip",
+        trip_id,
+        "reopened",
+        current_user.user_id,
+        {"trip_name": trip["name"]}
+    )
+    
+    return {"message": "Trip reopened"}
+
+
 
 @app.delete("/api/trips/{trip_id}")
 async def delete_trip(

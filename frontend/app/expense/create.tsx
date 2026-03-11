@@ -130,11 +130,6 @@ export default function CreateExpenseScreen() {
       return;
     }
 
-    if (!receiptImage) {
-      Alert.alert('Error', 'Por favor captura o selecciona una foto del ticket');
-      return;
-    }
-
     try {
       setLoading(true);
       await api.post('/api/expenses', {
@@ -143,7 +138,7 @@ export default function CreateExpenseScreen() {
         date: new Date(date).toISOString(),
         establishment: establishment.trim(),
         category_id: categoryId,
-        receipt_image: receiptImage,
+        receipt_image: receiptImage || null,
         notes: notes.trim() || null,
       });
 

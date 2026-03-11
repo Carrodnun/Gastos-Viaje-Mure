@@ -85,7 +85,11 @@ export default function Index() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Por favor ingresa email y contraseña');
+      if (Platform.OS === 'web') {
+        window.alert('Por favor ingresa email y contraseña');
+      } else {
+        Alert.alert('Error', 'Por favor ingresa email y contraseña');
+      }
       return;
     }
 
@@ -93,7 +97,12 @@ export default function Index() {
       setLoggingIn(true);
       await login(email, password);
     } catch (error: any) {
-      Alert.alert('Error de Inicio de Sesión', error.message || 'Credenciales inválidas');
+      const errorMsg = error.message || 'Email o contraseña incorrectos';
+      if (Platform.OS === 'web') {
+        window.alert(errorMsg);
+      } else {
+        Alert.alert('Error de Inicio de Sesión', errorMsg);
+      }
     } finally {
       setLoggingIn(false);
     }

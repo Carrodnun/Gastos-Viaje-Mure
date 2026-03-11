@@ -33,8 +33,10 @@ export default function TripDetailScreen() {
   const [showParticipants, setShowParticipants] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showReopenModal, setShowReopenModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [closeLoading, setCloseLoading] = useState(false);
+  const [reopenLoading, setReopenLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
   const loadData = async () => {
@@ -43,7 +45,7 @@ export default function TripDetailScreen() {
       const [tripRes, expensesRes, usersRes, centersRes] = await Promise.all([
         api.get(`/api/trips/${id}`),
         api.get(`/api/expenses/trip/${id}`),
-        api.get('/api/admin/users'),
+        api.get('/api/users'),
         api.get('/api/admin/cost-centers'),
       ]);
 
@@ -126,6 +128,31 @@ export default function TripDetailScreen() {
       setCloseLoading(false);
     }
   };
+
+  const handleReopenTrip = async () => {
+    try {
+      setReopenLoading(true);
+      await api.post(`/api/trips/${id}/reopen`);
+      setShowReopenModal(false);
+      loadData(); // Reload trip data
+      const msg = 'Viaje reabierto correctamente. Ya puedes añadir más gastos.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Éxito', msg);
+      }
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || 'Error al reabrir el viaje';
+      if (Platform.OS === 'web') {
+        window.alert('Error: ' + errorMsg);
+      } else {
+        Alert.alert('Error', errorMsg);
+      }
+    } finally {
+      setReopenLoading(false);
+    }
+  };
+
 
   const handleExportExcel = async () => {
     try {
@@ -439,6 +466,17 @@ export default function TripDetailScreen() {
           </View>
         )}
 
+        {/* Botón para reabrir viaje cerrado */}
+        {trip.status === 'closed' && (
+          <TouchableOpacity 
+            style={styles.reopenButton} 
+            onPress={() => setShowReopenModal(true)}
+          >
+            <Ionicons name="lock-open" size={20} color={COLORS.warning || '#FF9500'} />
+            <Text style={styles.reopenButtonText}>Reabrir Viaje</Text>
+          </TouchableOpacity>
+        )}
+
         {trip.status !== 'approved' && trip.status !== 'closed' && (
           <View style={styles.warningCard}>
             <Ionicons name="information-circle" size={24} color={COLORS.warning} />
@@ -554,6 +592,45 @@ export default function TripDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de confirmación para reabrir */}
+      <Modal visible={showReopenModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="lock-open" size={48} color={COLORS.warning || '#FF9500'} />
+            </View>
+            <Text style={styles.modalTitle}>Reabrir Viaje</Text>
+            <Text style={styles.modalText}>
+              ¿Estás seguro que deseas reabrir "{trip.name}"?
+            </Text>
+            <Text style={styles.modalWarning}>
+              El viaje volverá a estado "aprobado" y se podrán añadir más gastos.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowReopenModal(false)}
+                disabled={reopenLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: COLORS.warning || '#FF9500' }]}
+                onPress={handleReopenTrip}
+                disabled={reopenLoading}
+              >
+                {reopenLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalDeleteText}>Reabrir</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
       {/* Modal de confirmación para eliminar */}
       <Modal visible={showDeleteModal} transparent animationType="fade">
@@ -900,6 +977,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5B21B6',
     marginLeft: 12,
+  },
+  reopenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    backgroundColor: '#FFF7ED',
+  },
+  reopenButtonText: {
+    color: '#FF9500',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   fab: {
     position: 'absolute',

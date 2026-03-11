@@ -53,7 +53,7 @@ export default function CreateTripScreen() {
     try {
       const [centersRes, usersRes] = await Promise.all([
         api.get('/api/admin/cost-centers'),
-        api.get('/api/admin/users'),
+        api.get('/api/users'),
       ]);
       setCostCenters(centersRes.data.cost_centers.filter((c: CostCenter) => c.active));
       setUsers(usersRes.data.users.filter((u: User) => u.user_id !== currentUser?.user_id));

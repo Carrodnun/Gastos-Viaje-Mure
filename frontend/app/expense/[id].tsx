@@ -32,7 +32,7 @@ export default function ExpenseDetailScreen() {
       setLoading(true);
       const [expenseRes, usersRes, categoriesRes] = await Promise.all([
         api.get(`/api/expenses/${id}`),
-        api.get('/api/admin/users'),
+        api.get('/api/users'),
         api.get('/api/admin/expense-categories'),
       ]);
 
